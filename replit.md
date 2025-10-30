@@ -70,14 +70,14 @@ The Custom Character Database feature requires PostgreSQL:
 5. Use saved characters in Remix Mode
 
 ### Remix Mode
-1. Click "Remix Mode" button to toggle the remix section
-2. Paste the Sora video link (optional)
-3. Paste the original prompt from the Sora video
-4. Enter new character names (comma-separated) - can use saved characters
-5. Optionally customize: style, lighting, camera, music, mood
-6. Click "Generate Remix" to create a remix prompt
+1. Click "Remix Mode" button to toggle the Sora Remix Station
+2. Paste the Sora video link in Box 1
+3. Add your remix "ingredients" as JSON in Box 2:
+   - Example: `{"characters":["@bonniebluexo"], "style":"Neon Noir", "lighting":"sunset orange haze", "camera":"low angle slow push", "music":"1990s Louisiana gangster rap", "mood":"moody romantic tension"}`
+4. Click "Save Remix Preset" to save your setup to localStorage for later
+5. Click "Load Preset" to reload a saved remix configuration
+6. Click "Remix It!" to generate your final Sora remix prompt
 7. Copy the generated remix prompt to use in Sora
-8. Save/Load Vibe Packs to reuse your favorite style combinations (stored in browser localStorage)
 
 ## Recent Changes
 - October 30, 2025 (Late Evening): Added Custom Character Database with PostgreSQL for permanent character storage

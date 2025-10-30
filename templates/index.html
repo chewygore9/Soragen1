@@ -33,42 +33,18 @@ textarea {height:100px; resize:vertical;}
 </div>
 
 <div id="remixSection" class="remix-section">
-  <h2>🎭 REMIX MODE - Gangster Style</h2>
+  <h2>🎚️ Sora Remix Station</h2>
   <div class="input-row">
-    <label>Sora Video Link:</label><br>
-    <input id="videoLink" placeholder="https://sora.chatgpt.com/p/...">
+    <label>📹 Sora Link:</label><br>
+    <input id="videoLink" placeholder="https://sora.chatgpt.com/p/s_...">
   </div>
   <div class="input-row">
-    <label>Original Prompt:</label><br>
-    <textarea id="originalPrompt" placeholder="Paste the original Sora prompt here..."></textarea>
+    <label>🥚 Remix Ingredients (JSON):</label><br>
+    <textarea id="remixJSON" placeholder='{"characters":["@bonniebluexo","@obesewitherspooon"], "style":"Neon Noir", "lighting":"sunset orange haze", "camera":"low angle slow push", "music":"1990s Louisiana gangster rap", "mood":"moody romantic tension"}' style="height:150px;"></textarea>
   </div>
-  <div class="input-row">
-    <label>New Characters (comma-separated):</label><br>
-    <input id="remixChars" placeholder="@obesewitherspooon, @bonniebluexo">
-  </div>
-  <div class="input-row">
-    <label>Remix Style:</label><br>
-    <input id="remixStyle" placeholder="Cyberpunk Neon Ghetto, cartoon noir, etc.">
-  </div>
-  <div class="input-row">
-    <label>Lighting:</label><br>
-    <input id="remixLighting" placeholder="sunset orange haze, deep shadows, rim light silhouettes">
-  </div>
-  <div class="input-row">
-    <label>Camera:</label><br>
-    <input id="remixCamera" placeholder="dynamic pan-ins, low angle, fast cuts">
-  </div>
-  <div class="input-row">
-    <label>Music/Sound:</label><br>
-    <input id="remixMusic" placeholder="1990s Louisiana gangster rap">
-  </div>
-  <div class="input-row">
-    <label>Mood:</label><br>
-    <input id="remixMood" placeholder="moody, surreal, romantic tension">
-  </div>
-  <button id="generateRemix">🎬 Generate Remix</button>
-  <button id="savePreset">💾 Save Vibe Pack</button>
-  <button id="loadPreset">📂 Load Vibe Pack</button>
+  <button id="savePreset">💾 Save Remix Preset</button>
+  <button id="loadPreset">📂 Load Preset</button>
+  <button id="generateRemix">🎛️ Remix It!</button>
 </div>
 
 <div id="results"></div>
@@ -190,31 +166,35 @@ document.getElementById('remixToggle').addEventListener('click', ()=>{
 
 document.getElementById('generateRemix').addEventListener('click', async ()=>{
   const videoLink = document.getElementById('videoLink').value;
-  const originalPrompt = document.getElementById('originalPrompt').value;
-  const characters = document.getElementById('remixChars').value;
-  const style = document.getElementById('remixStyle').value;
-  const lighting = document.getElementById('remixLighting').value;
-  const camera = document.getElementById('remixCamera').value;
-  const music = document.getElementById('remixMusic').value;
-  const mood = document.getElementById('remixMood').value;
+  const remixJSONText = document.getElementById('remixJSON').value;
 
-  if(!originalPrompt){
-    alert('Please paste the original prompt!');
+  if(!remixJSONText){
+    alert('Please add your remix ingredients (JSON)!');
     return;
   }
 
+  let remix;
+  try {
+    remix = JSON.parse(remixJSONText);
+  } catch(e) {
+    alert('Invalid JSON! Check your remix ingredients formatting.');
+    return;
+  }
+
+  const characters = Array.isArray(remix.characters) ? remix.characters.join(', ') : (remix.characters || '');
+  
   const res = await fetch('/remix',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       video_link: videoLink,
-      original_prompt: originalPrompt,
+      original_prompt: remix.original_prompt || '',
       characters: characters,
-      style: style,
-      lighting: lighting,
-      camera: camera,
-      music: music,
-      mood: mood
+      style: remix.style || '',
+      lighting: remix.lighting || '',
+      camera: remix.camera || '',
+      music: remix.music || '',
+      mood: remix.mood || ''
     })
   });
   const data = await res.json();
@@ -233,41 +213,32 @@ document.getElementById('generateRemix').addEventListener('click', async ()=>{
 });
 
 document.getElementById('savePreset').addEventListener('click', ()=>{
-  const presetName = prompt('Name your vibe pack:');
+  const presetName = prompt('Name your remix preset:');
   if(!presetName) return;
   
   const preset = {
-    name: presetName,
-    characters: document.getElementById('remixChars').value,
-    style: document.getElementById('remixStyle').value,
-    lighting: document.getElementById('remixLighting').value,
-    camera: document.getElementById('remixCamera').value,
-    music: document.getElementById('remixMusic').value,
-    mood: document.getElementById('remixMood').value
+    soraLink: document.getElementById('videoLink').value,
+    remix: document.getElementById('remixJSON').value
   };
   
-  localStorage.setItem('vibepack_' + presetName, JSON.stringify(preset));
-  alert('Vibe pack saved: ' + presetName);
+  localStorage.setItem('remix_preset_' + presetName, JSON.stringify(preset));
+  alert('Remix preset saved: ' + presetName);
 });
 
 document.getElementById('loadPreset').addEventListener('click', ()=>{
-  const presetName = prompt('Enter vibe pack name to load:');
+  const presetName = prompt('Enter remix preset name to load:');
   if(!presetName) return;
   
-  const preset = localStorage.getItem('vibepack_' + presetName);
+  const preset = localStorage.getItem('remix_preset_' + presetName);
   if(!preset){
-    alert('Vibe pack not found!');
+    alert('Remix preset not found!');
     return;
   }
   
   const data = JSON.parse(preset);
-  document.getElementById('remixChars').value = data.characters || '';
-  document.getElementById('remixStyle').value = data.style || '';
-  document.getElementById('remixLighting').value = data.lighting || '';
-  document.getElementById('remixCamera').value = data.camera || '';
-  document.getElementById('remixMusic').value = data.music || '';
-  document.getElementById('remixMood').value = data.mood || '';
-  alert('Vibe pack loaded: ' + presetName);
+  document.getElementById('videoLink').value = data.soraLink || '';
+  document.getElementById('remixJSON').value = data.remix || '';
+  alert('Remix preset loaded: ' + presetName);
 });
 </script>
 </body>
