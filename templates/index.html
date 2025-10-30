@@ -28,7 +28,14 @@ textarea {height:100px; resize:vertical;}
 <div style="border:2px solid #0ff; padding:20px; margin:20px 0;">
   <h2>💾 Save Custom Characters</h2>
   <p>Add characters you made in Sora (comma-separated):</p>
-  <input id="saveCharsInput" placeholder="@yourcharacter1, @yourcharacter2" style="width:500px;">
+  <input id="saveCharsInput" list="charSuggestions" placeholder="@yourcharacter1, @yourcharacter2" style="width:500px;">
+  <datalist id="charSuggestions">
+    <option value="@obesewith.">
+    <option value="@obesewith.munky">
+    <option value="@obesewith.glassy">
+    <option value="@obesewith.yerm">
+    <option value="@obesewith.teefred">
+  </datalist>
   <button id="saveCharsBtn">💾 Save to Database</button>
   <div id="savedCharsList" style="margin-top:10px;"></div>
 </div>
