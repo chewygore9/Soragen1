@@ -1,8 +1,40 @@
 from flask import Flask, render_template, jsonify, request, send_file
 from datetime import datetime
-import random, json, io
+import random, json, io, os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
+
+# ==== DATABASE SETUP ====
+DB_ENABLED = os.environ.get('DATABASE_URL') is not None
+
+def get_db_connection():
+    if not DB_ENABLED:
+        return None
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    return conn
+
+def init_db():
+    if not DB_ENABLED:
+        return
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS custom_characters (
+                id SERIAL PRIMARY KEY,
+                character_name TEXT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Database initialization warning: {e}")
+
+init_db()
 
 # ==== PROMPT BANKS ====
 scene_options = [
@@ -154,6 +186,102 @@ def cycle():
         "cameos": cameos,
         "variants": variants
     })
+
+@app.route("/remix", methods=["POST"])
+def remix():
+    data = request.get_json()
+    video_link = data.get("video_link", "")
+    original_prompt = data.get("original_prompt", "")
+    characters = data.get("characters", "")
+    style = data.get("style", "")
+    lighting = data.get("lighting", "")
+    camera = data.get("camera", "")
+    music = data.get("music", "")
+    mood = data.get("mood", "")
+    
+    char_list = [c.strip() for c in characters.split(",")] if characters else []
+    
+    remix_config = {
+        "characters": char_list,
+        "style": style or "original style",
+        "lighting": lighting or "original lighting",
+        "camera": camera or "original camera work",
+        "music": music or "original soundtrack",
+        "mood": mood or "original mood"
+    }
+    
+    sora_prompt = f"Recreate the following scene with these modifications:\n\n"
+    sora_prompt += f"ORIGINAL: {original_prompt}\n\n"
+    sora_prompt += f"REMIX SETTINGS:\n"
+    if char_list:
+        sora_prompt += f"- Replace characters with: {', '.join(char_list)}\n"
+    if style:
+        sora_prompt += f"- Style: {style}\n"
+    if lighting:
+        sora_prompt += f"- Lighting: {lighting}\n"
+    if camera:
+        sora_prompt += f"- Camera: {camera}\n"
+    if music:
+        sora_prompt += f"- Music/Sound: {music}\n"
+    if mood:
+        sora_prompt += f"- Mood: {mood}\n"
+    sora_prompt += f"\nKeep the core scene and pacing, but apply these creative treatments to make it fresh."
+    
+    return jsonify({
+        "original_video": video_link,
+        "remix_version": f"{char_list[0] if char_list else 'Unknown'} Cinematic Remix",
+        "remix_config": remix_config,
+        "sora_prompt": sora_prompt
+    })
+
+@app.route("/save_characters", methods=["POST"])
+def save_characters():
+    if not DB_ENABLED:
+        return jsonify({"error": "Database not configured"}), 503
+    
+    data = request.get_json()
+    characters = data.get("characters", "")
+    char_list = [c.strip() for c in characters.split(",") if c.strip()]
+    
+    if not char_list:
+        return jsonify({"error": "No characters provided"}), 400
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    saved = []
+    skipped = []
+    
+    for char in char_list:
+        try:
+            cur.execute("INSERT INTO custom_characters (character_name) VALUES (%s)", (char,))
+            conn.commit()
+            saved.append(char)
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            skipped.append(char)
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({
+        "saved": saved,
+        "skipped": skipped,
+        "message": f"Saved {len(saved)} character(s). {len(skipped)} already existed."
+    })
+
+@app.route("/get_characters", methods=["GET"])
+def get_characters():
+    if not DB_ENABLED:
+        return jsonify({"characters": []})
+    
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT character_name, created_at FROM custom_characters ORDER BY created_at DESC")
+    characters = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    return jsonify({"characters": [c["character_name"] for c in characters]})
 
 @app.route("/download", methods=["POST"])
 def download():

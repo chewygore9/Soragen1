@@ -17,14 +17,25 @@ SoraWildStyleGen/
 - Web interface with copy-to-clipboard functionality
 - Generates 2 prompts at a time
 - Style Cycler: Generates 5 variants of the same scene with different creative treatments
+- Remix Mode: Recreate existing Sora videos with new characters and creative settings
+- Custom Character Database: Save and reuse your Sora character names permanently
+- Vibe Pack Presets: Save and load custom style configurations (localStorage)
 - Download JSON: Save generated prompts as a JSON file with metadata (creator, timestamp, version, notes)
 - Cyberpunk-inspired dark theme UI
-- Characters: @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred
+- Default Characters: @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred
 
 ## Tech Stack
 - Python 3.11
 - Flask 3.1.2
+- PostgreSQL (optional, for custom character storage)
+- psycopg2-binary
 - HTML/CSS/JavaScript
+
+## Database Setup (Optional)
+The Custom Character Database feature requires PostgreSQL:
+- The app automatically detects if `DATABASE_URL` environment variable is set
+- If database is not configured, character saving features will gracefully degrade
+- The app will run normally without a database; all other features remain functional
 
 ## How to Use
 
@@ -51,7 +62,27 @@ SoraWildStyleGen/
    - Your project notes
    - All prompt data (includes base scene, dialogue, cameos for Style Cycler mode)
 
+### Save Custom Characters
+1. Enter character names (comma-separated) in the text box
+2. Click "Save to Database" button
+3. Characters are permanently stored in PostgreSQL database
+4. View all saved characters below the save box
+5. Use saved characters in Remix Mode
+
+### Remix Mode
+1. Click "Remix Mode" button to toggle the remix section
+2. Paste the Sora video link (optional)
+3. Paste the original prompt from the Sora video
+4. Enter new character names (comma-separated) - can use saved characters
+5. Optionally customize: style, lighting, camera, music, mood
+6. Click "Generate Remix" to create a remix prompt
+7. Copy the generated remix prompt to use in Sora
+8. Save/Load Vibe Packs to reuse your favorite style combinations (stored in browser localStorage)
+
 ## Recent Changes
+- October 30, 2025 (Late Evening): Added Custom Character Database with PostgreSQL for permanent character storage
+- October 30, 2025 (Late Evening): Added Remix Mode to recreate Sora videos with new characters and style settings
+- October 30, 2025 (Late Evening): Added Vibe Pack preset save/load functionality (localStorage)
 - October 30, 2025 (Evening): Added metadata to JSON downloads (creator, timestamp, version, project notes)
 - October 30, 2025 (Evening): Added JSON download feature to save prompts as files
 - October 30, 2025 (PM): Added Style Cycler feature with 5-variant generation

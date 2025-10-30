@@ -5,23 +5,106 @@
 <title>SORA Wild Style Generator</title>
 <style>
 body {background:#0b0b0b; color:#0ff; font-family:monospace; padding:20px;}
-button {background:#0ff; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer;}
+button {background:#0ff; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer; margin:5px;}
 pre {background:#111; padding:10px; border:1px solid #0ff; white-space:pre-wrap;}
 .copy {background:#333; color:#0ff; border:1px solid #0ff; margin-top:5px;}
-input {background:#111; color:#0ff; border:1px solid #0ff; padding:8px; width:400px; font-family:monospace;}
+input, textarea {background:#111; color:#0ff; border:1px solid #0ff; padding:8px; width:400px; font-family:monospace;}
+textarea {height:100px; resize:vertical;}
+.remix-section {border:2px solid #0ff; padding:20px; margin:20px 0; display:none;}
+.remix-section.active {display:block;}
+.input-row {margin:10px 0;}
 </style>
 </head>
 <body>
 <h1>🎬 SORA Wild Style Generator</h1>
 <button id="gen">Generate Two Prompts</button>
 <button id="cycle">🎨 Style Cycler (5 Variants)</button>
+<button id="remixToggle">🔄 Remix Mode</button>
 <button id="download">⬇️ Download JSON File</button>
 <p>Project Notes (optional):</p>
 <input id="notesInput" placeholder="Example: Weekend TikTok dropset, bayou noir vibe">
+
+<div style="border:2px solid #0ff; padding:20px; margin:20px 0;">
+  <h2>💾 Save Custom Characters</h2>
+  <p>Add characters you made in Sora (comma-separated):</p>
+  <input id="saveCharsInput" placeholder="@yourcharacter1, @yourcharacter2" style="width:500px;">
+  <button id="saveCharsBtn">💾 Save to Database</button>
+  <div id="savedCharsList" style="margin-top:10px;"></div>
+</div>
+
+<div id="remixSection" class="remix-section">
+  <h2>🎭 REMIX MODE - Gangster Style</h2>
+  <div class="input-row">
+    <label>Sora Video Link:</label><br>
+    <input id="videoLink" placeholder="https://sora.chatgpt.com/p/...">
+  </div>
+  <div class="input-row">
+    <label>Original Prompt:</label><br>
+    <textarea id="originalPrompt" placeholder="Paste the original Sora prompt here..."></textarea>
+  </div>
+  <div class="input-row">
+    <label>New Characters (comma-separated):</label><br>
+    <input id="remixChars" placeholder="@obesewitherspooon, @bonniebluexo">
+  </div>
+  <div class="input-row">
+    <label>Remix Style:</label><br>
+    <input id="remixStyle" placeholder="Cyberpunk Neon Ghetto, cartoon noir, etc.">
+  </div>
+  <div class="input-row">
+    <label>Lighting:</label><br>
+    <input id="remixLighting" placeholder="sunset orange haze, deep shadows, rim light silhouettes">
+  </div>
+  <div class="input-row">
+    <label>Camera:</label><br>
+    <input id="remixCamera" placeholder="dynamic pan-ins, low angle, fast cuts">
+  </div>
+  <div class="input-row">
+    <label>Music/Sound:</label><br>
+    <input id="remixMusic" placeholder="1990s Louisiana gangster rap">
+  </div>
+  <div class="input-row">
+    <label>Mood:</label><br>
+    <input id="remixMood" placeholder="moody, surreal, romantic tension">
+  </div>
+  <button id="generateRemix">🎬 Generate Remix</button>
+  <button id="savePreset">💾 Save Vibe Pack</button>
+  <button id="loadPreset">📂 Load Vibe Pack</button>
+</div>
+
 <div id="results"></div>
 
 <script>
 let latestPrompts = [];
+
+async function loadSavedCharacters(){
+  const res = await fetch('/get_characters');
+  const data = await res.json();
+  const charsList = document.getElementById('savedCharsList');
+  if(data.characters.length > 0){
+    charsList.innerHTML = `<h3>Your Saved Characters:</h3><pre style="color:#0f0;">${data.characters.join(', ')}</pre>`;
+  } else {
+    charsList.innerHTML = '<p style="color:#888;">No saved characters yet.</p>';
+  }
+}
+
+document.getElementById('saveCharsBtn').addEventListener('click', async ()=>{
+  const chars = document.getElementById('saveCharsInput').value;
+  if(!chars){
+    alert('Enter some character names first!');
+    return;
+  }
+  const res = await fetch('/save_characters',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({characters: chars})
+  });
+  const data = await res.json();
+  alert(data.message);
+  document.getElementById('saveCharsInput').value = '';
+  loadSavedCharacters();
+});
+
+window.addEventListener('load', loadSavedCharacters);
 
 async function getPrompts(){
   const res = await fetch('/generate');
@@ -99,6 +182,92 @@ document.getElementById('download').addEventListener('click', async ()=>{
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   }
+});
+
+document.getElementById('remixToggle').addEventListener('click', ()=>{
+  document.getElementById('remixSection').classList.toggle('active');
+});
+
+document.getElementById('generateRemix').addEventListener('click', async ()=>{
+  const videoLink = document.getElementById('videoLink').value;
+  const originalPrompt = document.getElementById('originalPrompt').value;
+  const characters = document.getElementById('remixChars').value;
+  const style = document.getElementById('remixStyle').value;
+  const lighting = document.getElementById('remixLighting').value;
+  const camera = document.getElementById('remixCamera').value;
+  const music = document.getElementById('remixMusic').value;
+  const mood = document.getElementById('remixMood').value;
+
+  if(!originalPrompt){
+    alert('Please paste the original prompt!');
+    return;
+  }
+
+  const res = await fetch('/remix',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      video_link: videoLink,
+      original_prompt: originalPrompt,
+      characters: characters,
+      style: style,
+      lighting: lighting,
+      camera: camera,
+      music: music,
+      mood: mood
+    })
+  });
+  const data = await res.json();
+  latestPrompts = [data];
+  const box = document.getElementById('results');
+  box.innerHTML = `
+    <h2>🔥 REMIX READY</h2>
+    <h3>Original Video:</h3>
+    <pre>${data.original_video || 'N/A'}</pre>
+    <h3>Remix Config:</h3>
+    <pre>${JSON.stringify(data.remix_config, null, 2)}</pre>
+    <h3>🎬 Sora Prompt (Copy This):</h3>
+    <pre id="remixOut">${data.sora_prompt}</pre>
+    <button class="copy" onclick="copyText('remixOut')">Copy Remix Prompt</button>
+  `;
+});
+
+document.getElementById('savePreset').addEventListener('click', ()=>{
+  const presetName = prompt('Name your vibe pack:');
+  if(!presetName) return;
+  
+  const preset = {
+    name: presetName,
+    characters: document.getElementById('remixChars').value,
+    style: document.getElementById('remixStyle').value,
+    lighting: document.getElementById('remixLighting').value,
+    camera: document.getElementById('remixCamera').value,
+    music: document.getElementById('remixMusic').value,
+    mood: document.getElementById('remixMood').value
+  };
+  
+  localStorage.setItem('vibepack_' + presetName, JSON.stringify(preset));
+  alert('Vibe pack saved: ' + presetName);
+});
+
+document.getElementById('loadPreset').addEventListener('click', ()=>{
+  const presetName = prompt('Enter vibe pack name to load:');
+  if(!presetName) return;
+  
+  const preset = localStorage.getItem('vibepack_' + presetName);
+  if(!preset){
+    alert('Vibe pack not found!');
+    return;
+  }
+  
+  const data = JSON.parse(preset);
+  document.getElementById('remixChars').value = data.characters || '';
+  document.getElementById('remixStyle').value = data.style || '';
+  document.getElementById('remixLighting').value = data.lighting || '';
+  document.getElementById('remixCamera').value = data.camera || '';
+  document.getElementById('remixMusic').value = data.music || '';
+  document.getElementById('remixMood').value = data.mood || '';
+  alert('Vibe pack loaded: ' + presetName);
 });
 </script>
 </body>
