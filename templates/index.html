@@ -14,12 +14,16 @@ pre {background:#111; padding:10px; border:1px solid #0ff; white-space:pre-wrap;
 <h1>🎬 SORA Wild Style Generator</h1>
 <button id="gen">Generate Two Prompts</button>
 <button id="cycle">🎨 Style Cycler (5 Variants)</button>
+<button id="download">⬇️ Download JSON File</button>
 <div id="results"></div>
 
 <script>
+let latestPrompts = [];
+
 async function getPrompts(){
   const res = await fetch('/generate');
   const data = await res.json();
+  latestPrompts = data;
   const box = document.getElementById('results');
   box.innerHTML = '';
   data.forEach((p,i)=>{
@@ -47,6 +51,7 @@ document.getElementById('cycle').addEventListener('click', async ()=>{
     body:JSON.stringify({})
   });
   const data = await res.json();
+  latestPrompts = data;
   const box = document.getElementById('results');
   box.innerHTML = `<h2>🎭 Base Scene:</h2>
   <pre>${data.base_scene}</pre>
@@ -63,6 +68,32 @@ document.getElementById('cycle').addEventListener('click', async ()=>{
       <button class="copy" onclick="copyText('var${i}')">Copy</button>
     `;
   });
+});
+
+document.getElementById('download').addEventListener('click', async ()=>{
+  if(!latestPrompts || (Array.isArray(latestPrompts) && !latestPrompts.length) || (!Array.isArray(latestPrompts) && !Object.keys(latestPrompts).length)){
+    alert('Generate something first!');
+    return;
+  }
+  const res = await fetch('/download',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      filename:'sora_prompts.json',
+      content: latestPrompts
+    })
+  });
+  if(res.ok){
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sora_prompts.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
 });
 </script>
 </body>
