@@ -13,6 +13,7 @@ pre {background:#111; padding:10px; border:1px solid #0ff; white-space:pre-wrap;
 <body>
 <h1>🎬 SORA Wild Style Generator</h1>
 <button id="gen">Generate Two Prompts</button>
+<button id="cycle">🎨 Style Cycler (5 Variants)</button>
 <div id="results"></div>
 
 <script>
@@ -38,6 +39,31 @@ function copyText(id){
 }
 
 document.getElementById('gen').addEventListener('click', getPrompts);
+
+document.getElementById('cycle').addEventListener('click', async ()=>{
+  const res = await fetch('/cycle',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({})
+  });
+  const data = await res.json();
+  const box = document.getElementById('results');
+  box.innerHTML = `<h2>🎭 Base Scene:</h2>
+  <pre>${data.base_scene}</pre>
+  <h3>💬 Dialogue:</h3>
+  <pre>${data.dialogue}</pre>
+  <h3>🎬 Cameos:</h3>
+  <pre>${data.cameos.join(', ')}</pre>`;
+
+  data.variants.forEach((v,i)=>{
+    const j = JSON.stringify(v, null, 2);
+    box.innerHTML += `
+      <h2>Variant #${i+1}</h2>
+      <pre id="var${i}">${j}</pre>
+      <button class="copy" onclick="copyText('var${i}')">Copy</button>
+    `;
+  });
+});
 </script>
 </body>
 </html>

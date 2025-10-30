@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import random
 
 app = Flask(__name__)
@@ -120,6 +120,39 @@ def index():
 def generate():
     prompts = [generate_prompt() for _ in range(2)]
     return jsonify(prompts)
+
+@app.route("/cycle", methods=["POST"])
+def cycle():
+    data = request.get_json()
+    base_scene = random.choice(scene_options)
+    cameos = random.choice(cameos_options)
+    base_dialogue = random.choice(dialogue_options)
+
+    variants = []
+    for _ in range(5):
+        variant = {
+            "model": "sora-2",
+            "size": "1280x720",
+            "seconds": random.choice([10, 11, 12]),
+            "prompt": {
+                "scene": base_scene,
+                "cameos": cameos,
+                "camera": random.choice(camera_options),
+                "lighting": random.choice(lighting_options),
+                "style": random.choice(style_options),
+                "dialogue": base_dialogue,
+                "sound": random.choice(sound_options),
+                "mood": random.choice(mood_options)
+            }
+        }
+        variants.append(variant)
+
+    return jsonify({
+        "base_scene": base_scene,
+        "dialogue": base_dialogue,
+        "cameos": cameos,
+        "variants": variants
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
