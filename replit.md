@@ -17,7 +17,7 @@ SoraWildStyleGen/
 - Web interface with copy-to-clipboard functionality
 - Generates 2 prompts at a time
 - Style Cycler: Generates 5 variants of the same scene with different creative treatments
-- Download JSON: Save generated prompts as a JSON file for later use
+- Download JSON: Save generated prompts as a JSON file with metadata (creator, timestamp, version, notes)
 - Cyberpunk-inspired dark theme UI
 - Characters: @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred
 
@@ -41,12 +41,18 @@ SoraWildStyleGen/
 5. Perfect for exploring different creative treatments of the same concept
 
 ### Download JSON
-1. Generate prompts using either mode
-2. Click "Download JSON File" button
-3. Saves all generated prompts as `sora_prompts.json`
-4. Includes all metadata (base scene, dialogue, cameos for Style Cycler mode)
+1. Optionally add project notes in the text field (e.g., "Weekend TikTok dropset, bayou noir vibe")
+2. Generate prompts using either mode
+3. Click "Download JSON File" button
+4. Saves all generated prompts as `sora_prompts.json` with metadata:
+   - Creator: @obesewitherspooon
+   - Generated timestamp
+   - Version: v2.0
+   - Your project notes
+   - All prompt data (includes base scene, dialogue, cameos for Style Cycler mode)
 
 ## Recent Changes
+- October 30, 2025 (Evening): Added metadata to JSON downloads (creator, timestamp, version, project notes)
 - October 30, 2025 (Evening): Added JSON download feature to save prompts as files
 - October 30, 2025 (PM): Added Style Cycler feature with 5-variant generation
 - October 30, 2025: Converted from CLI script to Flask web app

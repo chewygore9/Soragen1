@@ -1,4 +1,5 @@
 from flask import Flask, render_template, jsonify, request, send_file
+from datetime import datetime
 import random, json, io
 
 app = Flask(__name__)
@@ -158,7 +159,20 @@ def cycle():
 def download():
     data = request.get_json()
     filename = data.get("filename", "sora_prompts.json")
-    json_str = json.dumps(data.get("content", {}), indent=2)
+    notes = data.get("notes", "No notes provided.")
+    creator_info = {
+        "creator": "@obesewitherspooon",
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "version": "v2.0",
+        "project_notes": notes
+    }
+
+    content = {
+        "meta": creator_info,
+        "prompts": data.get("content", [])
+    }
+
+    json_str = json.dumps(content, indent=2)
     buffer = io.BytesIO()
     buffer.write(json_str.encode("utf-8"))
     buffer.seek(0)

@@ -8,6 +8,7 @@ body {background:#0b0b0b; color:#0ff; font-family:monospace; padding:20px;}
 button {background:#0ff; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer;}
 pre {background:#111; padding:10px; border:1px solid #0ff; white-space:pre-wrap;}
 .copy {background:#333; color:#0ff; border:1px solid #0ff; margin-top:5px;}
+input {background:#111; color:#0ff; border:1px solid #0ff; padding:8px; width:400px; font-family:monospace;}
 </style>
 </head>
 <body>
@@ -15,6 +16,8 @@ pre {background:#111; padding:10px; border:1px solid #0ff; white-space:pre-wrap;
 <button id="gen">Generate Two Prompts</button>
 <button id="cycle">🎨 Style Cycler (5 Variants)</button>
 <button id="download">⬇️ Download JSON File</button>
+<p>Project Notes (optional):</p>
+<input id="notesInput" placeholder="Example: Weekend TikTok dropset, bayou noir vibe">
 <div id="results"></div>
 
 <script>
@@ -75,12 +78,14 @@ document.getElementById('download').addEventListener('click', async ()=>{
     alert('Generate something first!');
     return;
   }
+  const notes = document.getElementById('notesInput').value;
   const res = await fetch('/download',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       filename:'sora_prompts.json',
-      content: latestPrompts
+      content: latestPrompts,
+      notes: notes
     })
   });
   if(res.ok){
