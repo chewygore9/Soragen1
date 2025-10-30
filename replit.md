@@ -14,6 +14,7 @@ SoraWildStyleGen/
 
 ## Features
 - Random prompt generation combining multiple creative elements
+- **AI Generate (GPT-4)**: LLM-powered creative prompt generation for truly unique, never-repeating content
 - Web interface with copy-to-clipboard functionality
 - Generates 2 prompts at a time
 - Style Cycler: Generates 5 variants of the same scene with different creative treatments
@@ -41,8 +42,15 @@ The Custom Character Database feature requires PostgreSQL:
 
 ### Generate Two Prompts Mode
 1. Click "Generate Two Prompts" button
-2. Two random video prompts will appear
+2. Two random video prompts will appear (pulled from hardcoded library)
 3. Click "Copy" button under each prompt to copy to clipboard
+
+### AI Generate Mode (NEW!)
+1. Click "AI Generate (GPT-4)" button
+2. GPT-4o creates 2 completely unique, creative prompts from scratch
+3. Never repeats - infinite variety with wild, surreal scenarios
+4. Powered by Replit AI Integrations (charges billed to your Replit credits)
+5. Click "Copy" under any prompt to copy it to clipboard
 
 ### Style Cycler Mode
 1. Click "Style Cycler (5 Variants)" button
@@ -80,6 +88,8 @@ The Custom Character Database feature requires PostgreSQL:
 7. Copy the generated remix prompt to use in Sora
 
 ## Recent Changes
+- October 30, 2025 (Late Evening): Added AI Generate mode with GPT-4o for unlimited creative variety (Replit AI Integrations)
+- October 30, 2025 (Late Evening): Simplified Remix Mode to use JSON input format (2 boxes instead of multiple fields)
 - October 30, 2025 (Late Evening): Added Custom Character Database with PostgreSQL for permanent character storage
 - October 30, 2025 (Late Evening): Added Remix Mode to recreate Sora videos with new characters and style settings
 - October 30, 2025 (Late Evening): Added Vibe Pack preset save/load functionality (localStorage)

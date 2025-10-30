@@ -18,6 +18,7 @@ textarea {height:100px; resize:vertical;}
 <body>
 <h1>🎬 SORA Wild Style Generator</h1>
 <button id="gen">Generate Two Prompts</button>
+<button id="aiGen">🤖 AI Generate (GPT-4)</button>
 <button id="cycle">🎨 Style Cycler (5 Variants)</button>
 <button id="remixToggle">🔄 Remix Mode</button>
 <button id="download">⬇️ Download JSON File</button>
@@ -105,6 +106,35 @@ function copyText(id){
 }
 
 document.getElementById('gen').addEventListener('click', getPrompts);
+
+document.getElementById('aiGen').addEventListener('click', async ()=>{
+  const box = document.getElementById('results');
+  box.innerHTML = '<h2>🤖 AI is cooking up something wild...</h2>';
+  
+  const res = await fetch('/ai_generate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({})
+  });
+  
+  if(!res.ok){
+    const err = await res.json();
+    box.innerHTML = `<h2 style="color:#f00;">Error: ${err.error || 'AI generation failed'}</h2>`;
+    return;
+  }
+  
+  const data = await res.json();
+  latestPrompts = data;
+  box.innerHTML = '<h2>🤖 AI-Generated Prompts</h2>';
+  data.forEach((p,i)=>{
+    const j = JSON.stringify(p, null, 2);
+    box.innerHTML += `
+      <h2>AI Prompt #${i+1}</h2>
+      <pre id="ai${i}">${j}</pre>
+      <button class="copy" onclick="copyText('ai${i}')">Copy</button>
+    `;
+  });
+});
 
 document.getElementById('cycle').addEventListener('click', async ()=>{
   const res = await fetch('/cycle',{

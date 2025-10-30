@@ -3,8 +3,19 @@ from datetime import datetime
 import random, json, io, os
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from openai import OpenAI
 
 app = Flask(__name__)
+
+# ==== OPENAI SETUP ====
+AI_ENABLED = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY") is not None
+if AI_ENABLED:
+    client = OpenAI(
+        api_key=os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"),
+        base_url=os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
+    )
+else:
+    client = None
 
 # ==== DATABASE SETUP ====
 DB_ENABLED = os.environ.get('DATABASE_URL') is not None
@@ -186,6 +197,90 @@ def cycle():
         "cameos": cameos,
         "variants": variants
     })
+
+@app.route("/ai_generate", methods=["POST"])
+def ai_generate():
+    if not AI_ENABLED:
+        return jsonify({"error": "AI generation not available"}), 503
+    
+    try:
+        system_prompt = """You are a creative prompt generator for SORA AI video generation.
+Generate wild, surreal, cinematic prompts with a cyberpunk-bayou-noir aesthetic.
+Mix absurd humor with cinematic visuals. Characters often include @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred.
+Think: swamp cyberpunk, neon gators, trap beats with frogs, cosmic loyalty tests, microwave negotiations.
+Be weird, creative, and unexpected but keep it coherent enough to visualize."""
+
+        user_prompt = """Generate 2 unique SORA video prompts. Each should include:
+- scene: A bizarre but vivid scenario
+- cameos: 1-4 character handles (use @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred or make up new ones)
+- camera: Creative camera movement description
+- lighting: Atmospheric lighting description
+- style: Visual style/aesthetic
+- dialogue: One memorable quote from the scene
+- sound: Audio/music description
+- mood: Overall emotional vibe
+
+Return JSON in this exact structure:
+{
+  "prompts": [
+    {
+      "model": "sora-2",
+      "size": "1280x720",
+      "seconds": 10,
+      "prompt": {
+        "scene": "...",
+        "cameos": ["@handle1", "@handle2"],
+        "camera": "...",
+        "lighting": "...",
+        "style": "...",
+        "dialogue": "...",
+        "sound": "...",
+        "mood": "..."
+      }
+    },
+    {
+      "model": "sora-2",
+      "size": "1280x720",
+      "seconds": 11,
+      "prompt": {
+        "scene": "...",
+        "cameos": ["@handle1", "@handle2"],
+        "camera": "...",
+        "lighting": "...",
+        "style": "...",
+        "dialogue": "...",
+        "sound": "...",
+        "mood": "..."
+      }
+    }
+  ]
+}"""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=1.2
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        
+        if not isinstance(result, dict) or "prompts" not in result:
+            return jsonify({"error": "Invalid response format from AI"}), 500
+        
+        prompts = result["prompts"]
+        
+        if not isinstance(prompts, list) or len(prompts) == 0:
+            return jsonify({"error": "No prompts generated"}), 500
+        
+        return jsonify(prompts)
+        
+    except Exception as e:
+        print(f"AI generation error: {e}")
+        return jsonify({"error": f"AI generation failed: {str(e)}"}), 500
 
 @app.route("/remix", methods=["POST"])
 def remix():
