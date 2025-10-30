@@ -358,10 +358,20 @@ def save_characters():
     cur.close()
     conn.close()
     
+    # Better messaging
+    if len(saved) > 0 and len(skipped) > 0:
+        message = f"✅ Saved {len(saved)} new character(s). ⚠️ {len(skipped)} already in database: {', '.join(skipped)}"
+    elif len(saved) > 0:
+        message = f"✅ Saved {len(saved)} character(s) successfully!"
+    elif len(skipped) > 0:
+        message = f"ℹ️ All {len(skipped)} character(s) already exist in database: {', '.join(skipped)}"
+    else:
+        message = "No characters processed."
+    
     return jsonify({
         "saved": saved,
         "skipped": skipped,
-        "message": f"Saved {len(saved)} character(s). {len(skipped)} already existed."
+        "message": message
     })
 
 @app.route("/get_characters", methods=["GET"])
