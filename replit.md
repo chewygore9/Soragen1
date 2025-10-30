@@ -16,6 +16,7 @@ SoraWildStyleGen/
 - Random prompt generation combining multiple creative elements
 - Web interface with copy-to-clipboard functionality
 - Generates 2 prompts at a time
+- Style Cycler: Generates 5 variants of the same scene with different creative treatments
 - Cyberpunk-inspired dark theme UI
 - Characters: @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred
 
@@ -25,12 +26,21 @@ SoraWildStyleGen/
 - HTML/CSS/JavaScript
 
 ## How to Use
+
+### Generate Two Prompts Mode
 1. Click "Generate Two Prompts" button
 2. Two random video prompts will appear
 3. Click "Copy" button under each prompt to copy to clipboard
-4. Use the prompts with SORA AI video generation
+
+### Style Cycler Mode
+1. Click "Style Cycler (5 Variants)" button
+2. Generates 5 variants of the same base scene, dialogue, and cameos
+3. Each variant has different camera, lighting, style, sound, and mood combinations
+4. Click "Copy" under any variant to copy it to clipboard
+5. Perfect for exploring different creative treatments of the same concept
 
 ## Recent Changes
+- October 30, 2025 (PM): Added Style Cycler feature with 5-variant generation
 - October 30, 2025: Converted from CLI script to Flask web app
 - Added web interface with dark theme
 - Implemented copy-to-clipboard functionality
