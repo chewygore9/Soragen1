@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SORA Wild Style Generator</title>
+<style>
+body {background:#0b0b0b; color:#0ff; font-family:monospace; padding:20px;}
+button {background:#0ff; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer;}
+pre {background:#111; padding:10px; border:1px solid #0ff; white-space:pre-wrap;}
+.copy {background:#333; color:#0ff; border:1px solid #0ff; margin-top:5px;}
+</style>
+</head>
+<body>
+<h1>🎬 SORA Wild Style Generator</h1>
+<button id="gen">Generate Two Prompts</button>
+<div id="results"></div>
+
+<script>
+async function getPrompts(){
+  const res = await fetch('/generate');
+  const data = await res.json();
+  const box = document.getElementById('results');
+  box.innerHTML = '';
+  data.forEach((p,i)=>{
+    const j = JSON.stringify(p, null, 2);
+    box.innerHTML += `
+      <h2>Prompt #${i+1}</h2>
+      <pre id="out${i}">${j}</pre>
+      <button class="copy" onclick="copyText('out${i}')">Copy</button>
+    `;
+  });
+}
+
+function copyText(id){
+  const el = document.getElementById(id);
+  navigator.clipboard.writeText(el.innerText);
+  alert('Copied to clipboard!');
+}
+
+document.getElementById('gen').addEventListener('click', getPrompts);
+</script>
+</body>
+</html>

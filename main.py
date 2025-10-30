@@ -1,4 +1,7 @@
-import random, json
+from flask import Flask, render_template, jsonify
+import random
+
+app = Flask(__name__)
 
 # ==== PROMPT BANKS ====
 scene_options = [
@@ -109,13 +112,14 @@ def generate_prompt():
         }
     }
 
-# ==== MAIN ====
-if __name__ == "__main__":
-    print("🎬 SORA WILD STYLE GENERATOR v1.2 🎬")
-    print("Generating two cinematic prompts...\n")
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-    for i in range(2):
-        prompt = generate_prompt()
-        print(f"--- PROMPT #{i+1} ---")
-        print(json.dumps(prompt, indent=2))
-        print("\n--------------------------\n")
+@app.route('/generate')
+def generate():
+    prompts = [generate_prompt() for _ in range(2)]
+    return jsonify(prompts)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
