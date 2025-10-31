@@ -411,4 +411,5 @@ def download():
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/json")
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Disable auto-reload to prevent app from restarting when switching apps
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
