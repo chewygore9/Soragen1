@@ -193,6 +193,11 @@ def generate_prompt():
 def index():
     return render_template('index.html')
 
+@app.route('/snap-standalone')
+def snap_standalone():
+    """Serve the standalone Snap Remix Station"""
+    return send_file('snap_remix_standalone.html')
+
 @app.route('/generate')
 def generate():
     prompts = [generate_prompt() for _ in range(2)]

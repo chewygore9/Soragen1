@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snap Style Remix Station 🔥</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: radial-gradient(circle at 30% 30%, #0f0f0f, #000);
+      color: #00ffcc;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #ff3eff;
+      text-shadow: 0 0 10px #ff3eff;
+    }
+    select, button {
+      margin: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      background: #111;
+      color: #00ffcc;
+      outline: 1px solid #00ffcc;
+    }
+    button:hover {
+      background: #00ffcc;
+      color: #000;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    pre {
+      background: #111;
+      color: #00ffcc;
+      border: 1px solid #00ffcc;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 8px;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+    .copy-btn {
+      background: #ff3eff;
+      color: #fff;
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+    .copy-btn:hover {
+      background: #fff;
+      color: #ff3eff;
+      box-shadow: 0 0 15px #ff3eff;
+    }
+    .footer {
+      margin-top: 2rem;
+      color: #888;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 Snap Style Remix Station 🔥</h1>
+  <p>Generate short-form chaos for Sora or Snapchat with Tyrone's wild energy.</p>
+
+  <div>
+    <label>Personality Level:</label>
+    <select id="personality">
+      <option value="calm">Calm</option>
+      <option value="witty">Witty</option>
+      <option value="unhinged" selected>Unhinged</option>
+    </select>
+
+    <label>Duration (sec):</label>
+    <select id="duration">
+      <option value="10">10</option>
+      <option value="15" selected>15</option>
+      <option value="20">20</option>
+      <option value="30">30</option>
+    </select>
+  </div>
+
+  <button id="generateBtn">🎬 Generate Snap Prompt</button>
+  <button id="copyBtn" class="copy-btn" style="display:none;">📋 COPY TO CLIPBOARD</button>
+
+  <pre id="output"></pre>
+
+  <div class="footer">
+    Built by <b>Master Blaster & Tyrone</b> — Augment3D inK 2025
+  </div>
+
+  <script>
+    const data = {
+      theme: ["Urban Neon","Vintage Film","Cyberpunk","Wild Nature","Abstract Glitch","Louisiana Swamp","Miami Vice","Detroit Underground"],
+      lighting_style: ["Bright Daylight","Moody Sunset","Neon Glow","Silhouette Backlit","Spotlight Dramatic","Gas Station Fluorescent","Storm Lightning"],
+      camera_effects: ["Fast Zooms","Whip Pan","Jump Cut","Slow Motion","Time-Lapse","360 Spin","Shaky Handheld","Drone Swoop"],
+      visual_style: ["Graffiti Overlay","Chromatic Aberration","Film Grain","Flat Minimal","High Contrast B&W","VHS Static","Kaleidoscope","Double Exposure"],
+      audio_style: ["Beat Drop Intro","Spoken Word SFX","Ambient Rise","Voice Echo","Silence Then Boom","Trap Beats","Swamp Blues","808 Thunder"],
+      text_overlay_style: ["Bold Allcaps","Handwritten Scribbles","Glowing Neon Text","Minimal Subtitle","Comic Bubble","Graffiti Tag","Matrix Code"],
+      call_to_action: ["Swipe Up!","Join the Ride!","Don't Miss Out!","Catch the Drift!","Let's Go!","Ya Heard Me?","Pull Up!","Get With It!"],
+      characters: ["@obesewith.munky","@obesewith.glassy","@obesewith.yerm","@obesewith.teefred","@obesewith.cookie","@obesewith.jamarcus"],
+      scenes: [
+        "Glassy floating through space trying to light a blunt",
+        "Munky becomes president of a reptile biker gang",
+        "Yerm preaching loyalty on a swamp boat",
+        "Tee Fred counting cash in a foggy bayou",
+        "Cookie running a underground fight club for robots",
+        "Jamarcus DJing at an alien wedding"
+      ]
+    };
+
+    const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+    function generatePrompt() {
+      const personality = document.getElementById('personality').value;
+      const duration = document.getElementById('duration').value;
+      const theme = pick(data.theme);
+      const lighting = pick(data.lighting_style);
+      const camera = pick(data.camera_effects);
+      const visual = pick(data.visual_style);
+      const audio = pick(data.audio_style);
+      const textStyle = pick(data.text_overlay_style);
+      const cta = pick(data.call_to_action);
+      const scene = pick(data.scenes);
+      const numChars = Math.floor(Math.random() * 3) + 1;
+      const characters = [];
+      for(let i = 0; i < numChars; i++) {
+        const char = pick(data.characters);
+        if(!characters.includes(char)) characters.push(char);
+      }
+
+      let vibe = "";
+      let narrationStyle = "";
+      if (personality === "calm") {
+        vibe = "Relaxed and cinematic, smooth transitions, natural tone.";
+        narrationStyle = "smooth and philosophical";
+      } else if (personality === "witty") {
+        vibe = "Playful rhythm, quick cuts, tongue-in-cheek narration, sharp one-liners.";
+        narrationStyle = "clever with punchlines";
+      } else {
+        vibe = "Chaotic and explosive, jump cuts, wild camera motion, unfiltered energy!";
+        narrationStyle = "absolutely unhinged";
+      }
+
+      const output = `[SORA SNAP REMIX - ${personality.toUpperCase()} MODE]
+
+🎬 Duration: ${duration}s
+🎨 Theme: ${theme}
+💡 Lighting: ${lighting}
+📹 Camera: ${camera}
+🎞️ Visual: ${visual}
+🎵 Audio: ${audio}
+📝 Text Style: ${textStyle}
+🗣️ Personality: ${personality.toUpperCase()}
+👥 Characters: ${characters.join(', ')}
+
+📍 SCENE:
+${scene}
+
+🎯 VIBE:
+${vibe}
+
+🎙️ TYRONE NARRATION (${narrationStyle}):
+"Yo it's ${theme} energy, baby! We got ${characters[0]} in the cut! Snap it, spin it, send it — ${cta}"
+
+🔥 EXECUTION:
+Fast-cut ${theme.toLowerCase()} vibe with ${lighting.toLowerCase()} lighting and ${camera.toLowerCase()} camera work.
+Add ${visual.toLowerCase()} visuals with ${audio.toLowerCase()} soundtrack.
+Text styled as ${textStyle.toLowerCase()} flashes with '${cta}'.
+
+⚡ CALL TO ACTION: ${cta}`;
+
+      document.getElementById('output').textContent = output;
+      document.getElementById('copyBtn').style.display = 'inline-block';
+    }
+
+    function copyToClipboard() {
+      const text = document.getElementById('output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBtn');
+        const originalText = btn.textContent;
+        btn.textContent = '✅ COPIED!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }).catch(err => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✅ COPIED!';
+        setTimeout(() => {
+          btn.textContent = '📋 COPY TO CLIPBOARD';
+        }, 2000);
+      });
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', generatePrompt);
+    document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
+  </script>
+</body>
+</html>
