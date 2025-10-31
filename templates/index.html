@@ -48,7 +48,7 @@ textarea {height:100px; resize:vertical;}
   </div>
   <div class="input-row">
     <label>🥚 Remix Ingredients (JSON):</label><br>
-    <textarea id="remixJSON" placeholder='{"characters":["@bonniebluexo","@obesewitherspooon"], "style":"Neon Noir", "lighting":"sunset orange haze", "camera":"low angle slow push", "music":"1990s Louisiana gangster rap", "mood":"moody romantic tension"}' style="height:150px;"></textarea>
+    <textarea id="remixJSON" placeholder='{"characters":["@yourcharname1", "@yourcharname2"], "style":"Cyberpunk Neon", "lighting":"purple haze sunset", "camera":"slow tracking shot", "music":"trap beats with synth", "mood":"dreamy and surreal"}' style="height:150px;"></textarea>
   </div>
   <button id="savePreset">💾 Save Remix Preset</button>
   <button id="loadPreset">📂 Load Preset</button>
@@ -240,9 +240,11 @@ document.getElementById('generateRemix').addEventListener('click', async ()=>{
   box.innerHTML = `
     <h2>🔥 REMIX READY</h2>
     <h3>Original Video:</h3>
-    <pre>${data.original_video || 'N/A'}</pre>
+    <pre id="remixOriginal">${data.original_video || 'N/A'}</pre>
+    <button class="copy" onclick="copyText('remixOriginal')">Copy</button>
     <h3>Remix Config:</h3>
-    <pre>${JSON.stringify(data.remix_config, null, 2)}</pre>
+    <pre id="remixConfig">${JSON.stringify(data.remix_config, null, 2)}</pre>
+    <button class="copy" onclick="copyText('remixConfig')">Copy</button>
     <h3>🎬 Sora Prompt (Copy This):</h3>
     <pre id="remixOut">${data.sora_prompt}</pre>
     <button class="copy" onclick="copyText('remixOut')">Copy Remix Prompt</button>
