@@ -28,13 +28,35 @@ textarea {height:100px; resize:vertical;}
 
 <div style="border:2px solid #ff00ff; padding:20px; margin:20px 0;">
   <h2>🔑 Sora API Connection</h2>
-  <p>Enter your Sora API key to enable direct video generation (optional):</p>
-  <input id="soraApiKey" type="password" placeholder="sk-..." style="width:400px;">
+  <div style="margin-bottom:10px;">
+    <label style="color:#ff00ff;">API Provider:</label>
+    <select id="apiProvider" style="background:#111; color:#0ff; border:1px solid #0ff; padding:5px; margin-left:10px;">
+      <option value="openai">OpenAI Sora (Coming Soon)</option>
+      <option value="kieai">Kie.AI Sora 2 Pro</option>
+    </select>
+  </div>
+  <p id="apiInstructions">Enter your API key to enable direct video generation:</p>
+  <input id="soraApiKey" type="password" placeholder="Enter API key..." style="width:400px;">
   <button id="saveSoraKey">💾 Save Key</button>
   <button id="clearSoraKey">🗑️ Clear</button>
   <span id="soraStatus" style="margin-left:10px; font-weight:bold;"></span>
   <div id="soraFeatures" style="display:none; margin-top:15px;">
     <button id="generateSoraVideo" style="background:#ff00ff; color:#fff; font-size:1.2em; padding:15px;">🎬 Generate Sora Video from Last Prompt</button>
+    <div style="margin-top:10px;">
+      <label>Duration (seconds): </label>
+      <select id="videoDuration" style="background:#111; color:#0ff; border:1px solid #0ff; padding:3px;">
+        <option value="5">5s</option>
+        <option value="10" selected>10s</option>
+        <option value="15">15s</option>
+        <option value="20">20s</option>
+      </select>
+      <label style="margin-left:20px;">Resolution: </label>
+      <select id="videoResolution" style="background:#111; color:#0ff; border:1px solid #0ff; padding:3px;">
+        <option value="480p">480p</option>
+        <option value="720p" selected>720p (HD)</option>
+        <option value="1080p">1080p (Full HD)</option>
+      </select>
+    </div>
     <div id="soraVideoStatus" style="margin-top:10px;"></div>
   </div>
 </div>
@@ -77,11 +99,18 @@ textarea {height:100px; resize:vertical;}
 <script>
 let latestPrompts = [];
 let soraApiKey = null;
+let apiProvider = 'kieai'; // Default to Kie.AI
 
 // Sora API Key Management
 function initSoraAPI() {
-  // Load saved key from localStorage
-  const savedKey = localStorage.getItem('soraApiKey');
+  // Load saved provider and key from localStorage
+  const savedProvider = localStorage.getItem('soraApiProvider') || 'kieai';
+  const savedKey = localStorage.getItem(`soraApiKey_${savedProvider}`);
+  
+  document.getElementById('apiProvider').value = savedProvider;
+  apiProvider = savedProvider;
+  updateApiInstructions();
+  
   if (savedKey) {
     soraApiKey = savedKey;
     document.getElementById('soraApiKey').value = '••••••••' + savedKey.slice(-4); // Show last 4 chars
@@ -94,36 +123,82 @@ function initSoraAPI() {
   }
 }
 
-document.getElementById('saveSoraKey').addEventListener('click', () => {
-  const keyInput = document.getElementById('soraApiKey').value.trim();
-  if (keyInput && keyInput.startsWith('sk-')) {
-    soraApiKey = keyInput;
-    localStorage.setItem('soraApiKey', keyInput);
-    document.getElementById('soraApiKey').value = '••••••••' + keyInput.slice(-4);
-    document.getElementById('soraStatus').textContent = '✅ Key Saved';
+function updateApiInstructions() {
+  const provider = document.getElementById('apiProvider').value;
+  const instructions = document.getElementById('apiInstructions');
+  const keyInput = document.getElementById('soraApiKey');
+  
+  if (provider === 'openai') {
+    instructions.textContent = 'Enter your OpenAI Sora API key (starts with sk-):';
+    keyInput.placeholder = 'sk-...';
+  } else {
+    instructions.textContent = 'Enter your Kie.AI API key:';
+    keyInput.placeholder = 'Your Kie.AI API key...';
+  }
+}
+
+document.getElementById('apiProvider').addEventListener('change', (e) => {
+  apiProvider = e.target.value;
+  localStorage.setItem('soraApiProvider', apiProvider);
+  updateApiInstructions();
+  
+  // Load key for this provider if exists
+  const savedKey = localStorage.getItem(`soraApiKey_${apiProvider}`);
+  if (savedKey) {
+    soraApiKey = savedKey;
+    document.getElementById('soraApiKey').value = '••••••••' + savedKey.slice(-4);
+    document.getElementById('soraStatus').textContent = '✅ Key Loaded';
     document.getElementById('soraStatus').style.color = '#0f0';
     document.getElementById('soraFeatures').style.display = 'block';
-    alert('Sora API key saved locally! You can now generate videos.');
   } else {
-    alert('Please enter a valid Sora API key (starts with sk-)');
-  }
-});
-
-document.getElementById('clearSoraKey').addEventListener('click', () => {
-  if (confirm('Remove your Sora API key?')) {
     soraApiKey = null;
-    localStorage.removeItem('soraApiKey');
     document.getElementById('soraApiKey').value = '';
     document.getElementById('soraStatus').textContent = '❌ No Key';
     document.getElementById('soraStatus').style.color = '#f00';
     document.getElementById('soraFeatures').style.display = 'none';
-    alert('Sora API key removed');
+  }
+});
+
+document.getElementById('saveSoraKey').addEventListener('click', () => {
+  const keyInput = document.getElementById('soraApiKey').value.trim();
+  const provider = document.getElementById('apiProvider').value;
+  
+  if (!keyInput) {
+    alert('Please enter an API key');
+    return;
+  }
+  
+  // Validate based on provider
+  if (provider === 'openai' && !keyInput.startsWith('sk-')) {
+    alert('OpenAI keys should start with sk-');
+    return;
+  }
+  
+  soraApiKey = keyInput;
+  localStorage.setItem(`soraApiKey_${provider}`, keyInput);
+  document.getElementById('soraApiKey').value = '••••••••' + keyInput.slice(-4);
+  document.getElementById('soraStatus').textContent = '✅ Key Saved';
+  document.getElementById('soraStatus').style.color = '#0f0';
+  document.getElementById('soraFeatures').style.display = 'block';
+  alert(`${provider === 'openai' ? 'OpenAI Sora' : 'Kie.AI'} API key saved locally! You can now generate videos.`);
+});
+
+document.getElementById('clearSoraKey').addEventListener('click', () => {
+  if (confirm('Remove your Sora API key?')) {
+    const provider = document.getElementById('apiProvider').value;
+    soraApiKey = null;
+    localStorage.removeItem(`soraApiKey_${provider}`);
+    document.getElementById('soraApiKey').value = '';
+    document.getElementById('soraStatus').textContent = '❌ No Key';
+    document.getElementById('soraStatus').style.color = '#f00';
+    document.getElementById('soraFeatures').style.display = 'none';
+    alert('API key removed');
   }
 });
 
 document.getElementById('generateSoraVideo').addEventListener('click', async () => {
   if (!soraApiKey) {
-    alert('Please enter your Sora API key first!');
+    alert('Please enter your API key first!');
     return;
   }
   
@@ -132,58 +207,96 @@ document.getElementById('generateSoraVideo').addEventListener('click', async () 
     return;
   }
   
+  const provider = document.getElementById('apiProvider').value;
   const statusDiv = document.getElementById('soraVideoStatus');
-  statusDiv.innerHTML = '<div style="color:#ff00ff;">🎬 Generating Sora video... (this may take a few moments)</div>';
+  const duration = document.getElementById('videoDuration').value;
+  const resolution = document.getElementById('videoResolution').value;
+  
+  statusDiv.innerHTML = '<div style="color:#ff00ff;">🎬 Generating video... (this may take a few moments)</div>';
   
   // Get the most recent prompt
   const promptToUse = latestPrompts[0].sora_prompt || latestPrompts[0].prompt || JSON.stringify(latestPrompts[0]);
   
   try {
-    // Note: Sora API is not publicly available yet
-    // This is a placeholder for when it becomes available
-    const response = await fetch('https://api.openai.com/v1/video/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${soraApiKey}`
-      },
-      body: JSON.stringify({
-        model: 'sora-2',
-        prompt: promptToUse,
-        duration: 10,
-        size: '1280x720'
-      })
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      statusDiv.innerHTML = `
-        <div style="color:#0f0;">✅ Video generated!</div>
-        <div style="margin-top:10px;">
-          <a href="${data.url}" target="_blank" style="color:#ff00ff;">🎥 View Your Video</a>
-        </div>
-      `;
+    if (provider === 'kieai') {
+      // Use Flask backend route for Kie.AI
+      const response = await fetch('/api/sora-generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          api_key: soraApiKey,
+          prompt: promptToUse,
+          duration: parseInt(duration),
+          resolution: resolution
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.url) {
+          statusDiv.innerHTML = `
+            <div style="color:#0f0;">✅ Video generated with Kie.AI Sora 2 Pro!</div>
+            <div style="margin-top:10px;">
+              <a href="${data.url}" target="_blank" style="color:#ff00ff; font-size:1.2em;">🎥 View Your Video</a>
+            </div>
+            <div style="margin-top:5px; color:#888;">Duration: ${duration}s | Resolution: ${resolution}</div>
+          `;
+        } else if (data.status === 'processing') {
+          statusDiv.innerHTML = `
+            <div style="color:#ff0;">⏳ Video is being processed...</div>
+            <div style="color:#888; margin-top:5px;">Check back in a few moments. Job ID: ${data.job_id}</div>
+          `;
+        }
+      } else {
+        const error = await response.json();
+        statusDiv.innerHTML = `<div style="color:#f00;">❌ Error: ${error.error || 'Failed to generate video'}</div>`;
+      }
     } else {
-      const error = await response.text();
-      if (response.status === 404) {
+      // OpenAI Sora (placeholder for when available)
+      const response = await fetch('https://api.openai.com/v1/video/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${soraApiKey}`
+        },
+        body: JSON.stringify({
+          model: 'sora-2',
+          prompt: promptToUse,
+          duration: parseInt(duration),
+          size: resolution === '480p' ? '854x480' : resolution === '720p' ? '1280x720' : '1920x1080'
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
         statusDiv.innerHTML = `
-          <div style="color:#ff0;">⚠️ Sora API is not yet publicly available</div>
-          <div style="color:#888; margin-top:5px;">The Sora API is currently in limited access. Your key is saved for when it becomes available!</div>
-          <div style="margin-top:10px;">For now, copy your prompts and use them at: 
-            <a href="https://sora.openai.com" target="_blank" style="color:#ff00ff;">sora.openai.com</a>
+          <div style="color:#0f0;">✅ Video generated with OpenAI Sora!</div>
+          <div style="margin-top:10px;">
+            <a href="${data.url}" target="_blank" style="color:#ff00ff;">🎥 View Your Video</a>
           </div>
         `;
       } else {
-        statusDiv.innerHTML = `<div style="color:#f00;">❌ Error: ${error}</div>`;
+        if (response.status === 404) {
+          statusDiv.innerHTML = `
+            <div style="color:#ff0;">⚠️ OpenAI Sora API is not yet publicly available</div>
+            <div style="color:#888; margin-top:5px;">Your key is saved for when it becomes available!</div>
+            <div style="margin-top:10px;">For now, try using Kie.AI Sora 2 Pro or copy your prompts to: 
+              <a href="https://sora.openai.com" target="_blank" style="color:#ff00ff;">sora.openai.com</a>
+            </div>
+          `;
+        } else {
+          const error = await response.text();
+          statusDiv.innerHTML = `<div style="color:#f00;">❌ Error: ${error}</div>`;
+        }
       }
     }
   } catch (err) {
     statusDiv.innerHTML = `
-      <div style="color:#ff0;">⚠️ Sora API Connection Issue</div>
-      <div style="color:#888; margin-top:5px;">The Sora API may not be publicly available yet.</div>
-      <div style="margin-top:10px;">For now, copy your prompts and use them at: 
-        <a href="https://sora.openai.com" target="_blank" style="color:#ff00ff;">sora.openai.com</a>
-      </div>
+      <div style="color:#ff0;">⚠️ API Connection Issue</div>
+      <div style="color:#888; margin-top:5px;">Error: ${err.message}</div>
+      <div style="margin-top:10px;">Check your API key and try again.</div>
     `;
   }
 });

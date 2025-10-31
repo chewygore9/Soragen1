@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify, request, send_file
 from datetime import datetime
-import random, json, io, os
+import random, json, io, os, requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from openai import OpenAI
@@ -569,6 +569,72 @@ def download():
     buffer.write(json_str.encode("utf-8"))
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/json")
+
+@app.route("/api/sora-generate", methods=["POST"])
+def sora_generate_kieai():
+    """Generate video using Kie.AI Sora 2 Pro API"""
+    try:
+        data = request.get_json()
+        api_key = data.get("api_key")
+        prompt = data.get("prompt")
+        duration = data.get("duration", 10)
+        resolution = data.get("resolution", "720p")
+        
+        if not api_key:
+            return jsonify({"error": "API key is required"}), 400
+        if not prompt:
+            return jsonify({"error": "Prompt is required"}), 400
+        
+        # Call Kie.AI Sora 2 Pro API
+        response = requests.post(
+            "https://api.kie.ai/v1/sora",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "sora-2-pro",
+                "prompt": prompt,
+                "duration": duration,
+                "resolution": resolution
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            # Kie.AI might return a job ID for processing or direct URL
+            if result.get("url"):
+                return jsonify({
+                    "status": "completed",
+                    "url": result["url"],
+                    "duration": duration,
+                    "resolution": resolution
+                })
+            elif result.get("job_id"):
+                return jsonify({
+                    "status": "processing",
+                    "job_id": result["job_id"],
+                    "message": "Video is being generated. Check back in a few moments."
+                })
+            else:
+                return jsonify(result)
+        elif response.status_code == 401:
+            return jsonify({"error": "Invalid API key"}), 401
+        elif response.status_code == 429:
+            return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+        else:
+            error_data = response.json() if response.text else {"error": f"API error: {response.status_code}"}
+            return jsonify(error_data), response.status_code
+            
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Request timed out. Video generation might take longer."}), 504
+    except requests.exceptions.RequestException as e:
+        print(f"Kie.AI API request error: {e}")
+        return jsonify({"error": f"Connection error: {str(e)}"}), 503
+    except Exception as e:
+        print(f"Error in sora_generate_kieai: {e}")
+        return jsonify({"error": "Failed to generate video"}), 500
 
 if __name__ == '__main__':
     # Run in production mode for stability - no debug, no reloader

@@ -27,6 +27,12 @@ SoraWildStyleGen/
 - Character Database: Save and manage custom characters
 - Cyberpunk-inspired dark theme UI
 - Default Characters: @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred, @obesewith.cookie, @obesewith.jamarcus
+- **Sora API Integration**: Direct video generation support
+  - **Kie.AI Sora 2 Pro**: Fully functional with direct API integration
+  - **OpenAI Sora**: Ready for when API becomes public
+  - Client-side API key management (keys stored securely in browser localStorage)
+  - Configurable duration (5-20 seconds) and resolution (480p, 720p, 1080p)
+  - Backend proxy route for Kie.AI to handle CORS and security
 
 ## Tech Stack
 - Python 3.11
@@ -54,12 +60,16 @@ SoraWildStyleGen/
 4. Includes all metadata (base scene, dialogue, cameos for Style Cycler mode)
 
 ## Recent Changes
-- October 31, 2025: **MAJOR STABILITY UPDATE + SNAP REMIX**
+- October 31, 2025: **MAJOR STABILITY UPDATE + SNAP REMIX + KIE.AI INTEGRATION**
   - Fixed database stability issues - app now runs smoothly even if database is unavailable
   - Disabled Flask auto-reload to prevent app restarts when switching apps
   - Added Snap Remix (Tyrone Style) feature with personality-driven prompts
   - Fixed Remix Mode copy button for textarea elements
   - Database now provides fallback characters when connection fails
+  - **NEW: Kie.AI Sora 2 Pro Integration** - Fully functional video generation
+  - API key management box with provider selection (OpenAI/Kie.AI)
+  - Backend proxy route for secure Kie.AI API calls
+  - Configurable video duration and resolution settings
 - October 30, 2025 (Evening): Added JSON download feature to save prompts as files
 - October 30, 2025 (PM): Added Style Cycler feature with 5-variant generation
 - October 30, 2025: Converted from CLI script to Flask web app
