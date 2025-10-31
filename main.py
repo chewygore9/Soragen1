@@ -577,7 +577,7 @@ def download():
 
 @app.route("/generate", methods=["POST"])
 def generate_video():
-    """Generate video using correct Kie.AI API endpoint"""
+    """Generate video using updated Kie.AI API endpoints with fallback"""
     data = request.get_json()
     prompt = data.get("prompt")
     duration = data.get("duration", 10)
@@ -593,16 +593,17 @@ def generate_video():
     if not key_to_use:
         return jsonify({"error": "API key required. Set KIE_API_KEY env var or provide in request"}), 400
     
-    # Use correct Kie.AI endpoint
-    url = "https://api.kie.ai/v1/videos"
+    # Correct Kie.AI endpoint from latest documentation
+    url = "https://api.kie.ai/v1/video/generations"
     
-    # Correct payload structure according to docs
+    # Correct payload structure according to latest docs
     payload = {
         "model": "sora-2-pro",
         "prompt": prompt,
         "resolution": resolution,
-        "aspect_ratio": "16:9",  # Added required field
-        "duration": int(duration)  # Ensure integer
+        "aspect_ratio": "16:9",
+        "duration": int(duration),
+        "remove_watermark": True  # Added for better quality
     }
     
     headers = {
@@ -611,26 +612,33 @@ def generate_video():
     }
     
     try:
+        print(f"Calling Kie.AI API: {url}")
         response = requests.post(url, json=payload, headers=headers, timeout=30)
         
         if response.status_code == 200:
             result = response.json()
-            # Kie.AI returns a taskId, not a direct video URL
+            # Kie.AI returns a task_id for async processing
             return jsonify({
-                "taskId": result.get("taskId"),
-                "status": result.get("status", "queued"),
-                "message": "Video generation started. Poll /check-status/{taskId} to get the result."
+                "taskId": result.get("task_id"),
+                "status": "queued",
+                "message": "Video generation started. Use the taskId to check status."
             })
         elif response.status_code == 401:
-            return jsonify({"error": "Invalid API key"}), 401
+            return jsonify({"error": "Invalid API key. Please check your Kie.AI API key."}), 401
         elif response.status_code == 429:
             return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
         elif response.status_code == 400:
             error_data = response.json() if response.text else {"error": "Invalid request parameters"}
             return jsonify(error_data), 400
         else:
-            error_data = response.json() if response.text else {"error": f"API error: {response.status_code}"}
-            return jsonify(error_data), response.status_code
+            error_msg = f"API error: {response.status_code}"
+            if response.text:
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get("error", error_msg)
+                except:
+                    error_msg += f" - {response.text[:200]}"
+            return jsonify({"error": error_msg}), response.status_code
             
     except requests.exceptions.Timeout:
         return jsonify({"error": "Request timed out. Video generation might take longer."}), 504
@@ -649,7 +657,8 @@ def check_status(task_id):
     if not api_key:
         return jsonify({"error": "API key required"}), 400
     
-    url = f"https://api.kie.ai/v1/videos/{task_id}"
+    # Correct status check endpoint
+    url = f"https://api.kie.ai/v1/video/generations/{task_id}"
     headers = {
         "Authorization": f"Bearer {api_key}"
     }
