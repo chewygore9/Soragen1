@@ -444,6 +444,92 @@ def get_characters():
                         "@obesewith.jamarcus", "@obesewith.munky", "@obesewith.glassy"]
         return jsonify({"characters": default_chars})
 
+@app.route("/snap_remix", methods=["POST"])
+def snap_remix():
+    """Generate Snap-style remix with Tyrone personality"""
+    try:
+        # Load the snap style configuration
+        with open('snap_style_generator.json', 'r') as f:
+            snap_data = json.load(f)
+        
+        # Get personality from request or default to random
+        data = request.get_json() or {}
+        personality = data.get("personality", random.choice(snap_data["personality_level"]))
+        
+        # Random selections from each category
+        duration = random.choice(snap_data["video_duration_sec"])
+        theme = random.choice(snap_data["theme"])
+        lighting = random.choice(snap_data["lighting_style"])
+        camera = random.choice(snap_data["camera_effects"])
+        visual = random.choice(snap_data["visual_style"])
+        audio = random.choice(snap_data["audio_style"])
+        text_style = random.choice(snap_data["text_overlay_style"])
+        cta = random.choice(snap_data["call_to_action"])
+        
+        # Get random scene and characters from existing banks
+        scene = random.choice(scene_options)
+        cameos = random.choice(cameos_options)
+        
+        # Add Tyrone-style flavor text based on personality
+        if personality == "calm":
+            vibe = "Relaxed and cinematic, smooth transitions and natural tone."
+            narration_style = "chill and conversational"
+        elif personality == "witty":
+            vibe = "Playful rhythm, quick cuts, tongue-in-cheek narration, sharp one-liners."
+            narration_style = "clever and sarcastic"
+        else:  # unhinged
+            vibe = "Chaotic and explosive, jump cuts, spinning shots, wild energy, unfiltered Tyrone commentary!"
+            narration_style = "absolutely wild and unfiltered"
+        
+        # Build the Sora-ready prompt
+        sora_prompt = f"""[SNAP REMIX - {personality.upper()} MODE]
+
+🎬 Duration: {duration}s
+🎨 Theme: {theme}
+💡 Lighting: {lighting}
+📹 Camera: {camera}
+🎞️ Visual: {visual}
+🎵 Audio: {audio}
+📝 Text Style: {text_style}
+🗣️ Personality: {personality.upper()}
+👥 Characters: {', '.join(cameos)}
+
+📍 SCENE:
+{scene}
+
+🎯 VIBE:
+{vibe}
+
+🎙️ TYRONE NARRATION ({narration_style}):
+"Yo, it's {theme} energy time, baby! We got {', '.join(cameos)} in the mix! Let's roll the dice, snap the vibe, and flip the scene — {cta}!"
+
+🔥 EXECUTION:
+Create a fast-cut, {theme.lower()} inspired clip with {lighting.lower()} lighting and {camera.lower()} camera motion. 
+Add {visual.lower()} visuals synced to {audio.lower()} soundtrack. 
+On-screen text styled as {text_style.lower()} flashes across the screen with "{cta}".
+
+⚡ CALL TO ACTION: {cta}"""
+        
+        return jsonify({
+            "personality": personality,
+            "duration": duration,
+            "theme": theme,
+            "characters": cameos,
+            "scene": scene,
+            "sora_prompt": sora_prompt.strip(),
+            "config": {
+                "lighting": lighting,
+                "camera": camera,
+                "visual": visual,
+                "audio": audio,
+                "text_style": text_style,
+                "cta": cta
+            }
+        })
+    except Exception as e:
+        print(f"Error in snap_remix: {e}")
+        return jsonify({"error": "Failed to generate snap remix"}), 500
+
 @app.route("/download", methods=["POST"])
 def download():
     data = request.get_json()
