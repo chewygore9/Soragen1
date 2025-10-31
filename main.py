@@ -593,17 +593,16 @@ def generate_video():
     if not key_to_use:
         return jsonify({"error": "API key required. Set KIE_API_KEY env var or provide in request"}), 400
     
-    # Correct Kie.AI endpoint from latest documentation
-    url = "https://api.kie.ai/v1/video/generations"
+    # Correct Kie.AI endpoint (found and verified)
+    url = "https://api.kie.ai/api/v1/playground/createTask"
     
-    # Correct payload structure according to latest docs
+    # Correct payload structure for Kie.AI
     payload = {
-        "model": "sora-2-pro",
+        "model": "sora-2-pro-text-to-video",  # Correct model name
         "prompt": prompt,
-        "resolution": resolution,
-        "aspect_ratio": "16:9",
-        "duration": int(duration),
-        "remove_watermark": True  # Added for better quality
+        "aspectRatio": "16:9",  # camelCase for Kie.AI
+        "numFrames": int(duration) * 30,  # Convert seconds to frames (30fps)
+        "removeWatermark": True
     }
     
     headers = {
@@ -657,14 +656,17 @@ def check_status(task_id):
     if not api_key:
         return jsonify({"error": "API key required"}), 400
     
-    # Correct status check endpoint
-    url = f"https://api.kie.ai/v1/video/generations/{task_id}"
+    # Correct status check endpoint for Kie.AI
+    url = "https://api.kie.ai/api/v1/playground/recordInfo"
     headers = {
         "Authorization": f"Bearer {api_key}"
     }
+    params = {
+        "taskId": task_id  # camelCase for Kie.AI
+    }
     
     try:
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, params=params, timeout=30)
         
         if response.status_code == 200:
             result = response.json()
@@ -698,16 +700,17 @@ def sora_generate_kieai():
         
         # Call Kie.AI Sora 2 Pro API
         response = requests.post(
-            "https://api.kie.ai/v1/sora",
+            "https://api.kie.ai/api/v1/playground/createTask",
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json={
-                "model": "sora-2-pro",
+                "model": "sora-2-pro-text-to-video",  # Correct model name
                 "prompt": prompt,
-                "duration": duration,
-                "resolution": resolution
+                "aspectRatio": "16:9",  # camelCase
+                "numFrames": int(duration) * 30,  # Convert seconds to frames
+                "removeWatermark": True
             },
             timeout=30
         )
