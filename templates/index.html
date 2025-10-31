@@ -208,22 +208,36 @@ document.getElementById('remixBtn').addEventListener('click', () => {
     return;
   }
 
-  // Build the remix prompt dynamically
-  const remixPrompt = `🎬 Recreate the following Sora scene using these custom remix settings:
-
-🎥 Original Video:
-${soraLink}
-
-🎚️ Remix Ingredients:
-• Sound: ${remixData.sound || 'original'}
-• Style: ${remixData.style || 'original'}
-• Lighting: ${remixData.lighting || 'original'}
-• Mood: ${remixData.mood || 'original'}
-• Seconds: ${remixData.seconds || 'original'}
-• Size: ${remixData.size || 'original'}
-
-💡 Remix Notes:
-Keep the core pacing and camera movement, but apply the above creative treatments to make it fresh.`;
+  // Build the remix prompt with exact format requested
+  let remixPrompt = `🎬 Recreate the following Sora scene:\n\n`;
+  remixPrompt += `🎥 Original Video: ${soraLink}\n\n`;
+  remixPrompt += `🎚️ Remix Ingredients:\n`;
+  
+  // Add scene if it exists (special case)
+  if (remixData.scene) {
+    remixPrompt += `• Scene: ${remixData.scene}\n`;
+  }
+  if (remixData.sound) {
+    remixPrompt += `• Sound: ${remixData.sound}\n`;
+  }
+  if (remixData.style) {
+    remixPrompt += `• Style: ${remixData.style}\n`;
+  }
+  if (remixData.lighting) {
+    remixPrompt += `• Lighting: ${remixData.lighting}\n`;
+  }
+  if (remixData.camera) {
+    remixPrompt += `• Camera: ${remixData.camera}\n`;
+  }
+  if (remixData.mood) {
+    remixPrompt += `• Mood: ${remixData.mood}\n`;
+  }
+  if (remixData.seconds) {
+    remixPrompt += `• Seconds: ${remixData.seconds}\n`;
+  }
+  if (remixData.size) {
+    remixPrompt += `• Size: ${remixData.size}\n`;
+  }
 
   document.getElementById('remixOutput').value = remixPrompt.trim();
 });
