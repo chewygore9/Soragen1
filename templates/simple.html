@@ -225,19 +225,47 @@ document.querySelector('#genForm').onsubmit = async e => {
     
     const data = await res.json();
     
-    if (res.ok) {
-      if (data.url) {
-        // Video is ready
-        status.className = 'success';
-        status.innerHTML = `✅ Video generated successfully! <a href="${data.url}" target="_blank" class="link-btn">Download Video</a>`;
-        video.src = data.url;
-        video.style.display = 'block';
-      } else if (data.job_id) {
-        // Video is processing
-        status.className = 'loading';
-        status.textContent = `⏳ Video is processing... Job ID: ${data.job_id}`;
-        // Could implement polling here to check status
-      }
+    if (res.ok && data.taskId) {
+      // Start polling for video status
+      status.className = 'loading';
+      status.textContent = `⏳ Video generation started... Task ID: ${data.taskId}`;
+      
+      // Poll for status every 10 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusUrl = `/check-status/${data.taskId}${apiKey ? '?api_key=' + encodeURIComponent(apiKey) : ''}`;
+          const statusRes = await fetch(statusUrl);
+          const statusData = await statusRes.json();
+          
+          if (statusData.status === 'completed' && statusData.video_url) {
+            clearInterval(pollInterval);
+            status.className = 'success';
+            status.innerHTML = `✅ Video generated successfully! <a href="${statusData.video_url}" target="_blank" class="link-btn">Download Video</a>`;
+            video.src = statusData.video_url;
+            video.style.display = 'block';
+          } else if (statusData.status === 'failed') {
+            clearInterval(pollInterval);
+            status.className = 'error';
+            status.textContent = `❌ Video generation failed: ${statusData.error || 'Unknown error'}`;
+          } else {
+            status.textContent = `⏳ ${statusData.status || 'Processing'}... Please wait...`;
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          status.className = 'error';
+          status.textContent = `❌ Error checking status: ${err.message}`;
+        }
+      }, 10000); // Poll every 10 seconds
+      
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (status.className === 'loading') {
+          status.className = 'error';
+          status.textContent = '❌ Video generation timed out. Please try again.';
+        }
+      }, 300000);
+      
     } else {
       status.className = 'error';
       status.textContent = `❌ Error: ${data.error || 'Failed to generate video'}`;
