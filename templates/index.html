@@ -5,90 +5,20 @@
 <title>SORA Wild Style Generator</title>
 <style>
 body {background:#0b0b0b; color:#0ff; font-family:monospace; padding:20px;}
-button {background:#0ff; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer; margin:5px;}
+button {background:#0ff; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer;}
 pre {background:#111; padding:10px; border:1px solid #0ff; white-space:pre-wrap;}
 .copy {background:#333; color:#0ff; border:1px solid #0ff; margin-top:5px;}
-input, textarea {background:#111; color:#0ff; border:1px solid #0ff; padding:8px; width:400px; font-family:monospace;}
-textarea {height:100px; resize:vertical;}
-.remix-section {border:2px solid #0ff; padding:20px; margin:20px 0; display:none;}
-.remix-section.active {display:block;}
-.input-row {margin:10px 0;}
 </style>
 </head>
 <body>
 <h1>🎬 SORA Wild Style Generator</h1>
 <button id="gen">Generate Two Prompts</button>
-<button id="aiGen">🤖 AI Generate (GPT-4)</button>
 <button id="cycle">🎨 Style Cycler (5 Variants)</button>
-<button id="remixToggle">🔄 Remix Mode</button>
 <button id="download">⬇️ Download JSON File</button>
-<p>Project Notes (optional):</p>
-<input id="notesInput" placeholder="Example: Weekend TikTok dropset, bayou noir vibe">
-
-<div style="border:2px solid #0ff; padding:20px; margin:20px 0;">
-  <h2>💾 Save Custom Characters</h2>
-  <p>Add characters you made in Sora (comma-separated):</p>
-  <input id="saveCharsInput" list="charSuggestions" placeholder="@yourcharacter1, @yourcharacter2" style="width:500px;">
-  <datalist id="charSuggestions">
-    <option value="@obesewith.">
-    <option value="@obesewith.munky">
-    <option value="@obesewith.glassy">
-    <option value="@obesewith.yerm">
-    <option value="@obesewith.teefred">
-  </datalist>
-  <button id="saveCharsBtn">💾 Save to Database</button>
-  <div id="savedCharsList" style="margin-top:10px;"></div>
-</div>
-
-<div id="remixSection" class="remix-section">
-  <h2>🎚️ Sora Remix Station</h2>
-  <div class="input-row">
-    <label>📹 Sora Link:</label><br>
-    <input id="videoLink" placeholder="https://sora.chatgpt.com/p/s_...">
-  </div>
-  <div class="input-row">
-    <label>🥚 Remix Ingredients (JSON):</label><br>
-    <textarea id="remixJSON" placeholder='{"characters":["@yourcharname1", "@yourcharname2"], "style":"Cyberpunk Neon", "lighting":"purple haze sunset", "camera":"slow tracking shot", "music":"trap beats with synth", "mood":"dreamy and surreal"}' style="height:150px;"></textarea>
-  </div>
-  <button id="savePreset">💾 Save Remix Preset</button>
-  <button id="loadPreset">📂 Load Preset</button>
-  <button id="generateRemix">🎛️ Remix It!</button>
-</div>
-
 <div id="results"></div>
 
 <script>
 let latestPrompts = [];
-
-async function loadSavedCharacters(){
-  const res = await fetch('/get_characters');
-  const data = await res.json();
-  const charsList = document.getElementById('savedCharsList');
-  if(data.characters.length > 0){
-    charsList.innerHTML = `<h3>Your Saved Characters:</h3><pre style="color:#0f0;">${data.characters.join(', ')}</pre>`;
-  } else {
-    charsList.innerHTML = '<p style="color:#888;">No saved characters yet.</p>';
-  }
-}
-
-document.getElementById('saveCharsBtn').addEventListener('click', async ()=>{
-  const chars = document.getElementById('saveCharsInput').value;
-  if(!chars){
-    alert('Enter some character names first!');
-    return;
-  }
-  const res = await fetch('/save_characters',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({characters: chars})
-  });
-  const data = await res.json();
-  alert(data.message);
-  document.getElementById('saveCharsInput').value = '';
-  loadSavedCharacters();
-});
-
-window.addEventListener('load', loadSavedCharacters);
 
 async function getPrompts(){
   const res = await fetch('/generate');
@@ -113,35 +43,6 @@ function copyText(id){
 }
 
 document.getElementById('gen').addEventListener('click', getPrompts);
-
-document.getElementById('aiGen').addEventListener('click', async ()=>{
-  const box = document.getElementById('results');
-  box.innerHTML = '<h2>🤖 AI is cooking up something wild...</h2>';
-  
-  const res = await fetch('/ai_generate',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({})
-  });
-  
-  if(!res.ok){
-    const err = await res.json();
-    box.innerHTML = `<h2 style="color:#f00;">Error: ${err.error || 'AI generation failed'}</h2>`;
-    return;
-  }
-  
-  const data = await res.json();
-  latestPrompts = data;
-  box.innerHTML = '<h2>🤖 AI-Generated Prompts</h2>';
-  data.forEach((p,i)=>{
-    const j = JSON.stringify(p, null, 2);
-    box.innerHTML += `
-      <h2>AI Prompt #${i+1}</h2>
-      <pre id="ai${i}">${j}</pre>
-      <button class="copy" onclick="copyText('ai${i}')">Copy</button>
-    `;
-  });
-});
 
 document.getElementById('cycle').addEventListener('click', async ()=>{
   const res = await fetch('/cycle',{
@@ -174,14 +75,12 @@ document.getElementById('download').addEventListener('click', async ()=>{
     alert('Generate something first!');
     return;
   }
-  const notes = document.getElementById('notesInput').value;
   const res = await fetch('/download',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       filename:'sora_prompts.json',
-      content: latestPrompts,
-      notes: notes
+      content: latestPrompts
     })
   });
   if(res.ok){
@@ -195,89 +94,6 @@ document.getElementById('download').addEventListener('click', async ()=>{
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   }
-});
-
-document.getElementById('remixToggle').addEventListener('click', ()=>{
-  document.getElementById('remixSection').classList.toggle('active');
-});
-
-document.getElementById('generateRemix').addEventListener('click', async ()=>{
-  const videoLink = document.getElementById('videoLink').value;
-  const remixJSONText = document.getElementById('remixJSON').value;
-
-  if(!remixJSONText){
-    alert('Please add your remix ingredients (JSON)!');
-    return;
-  }
-
-  let remix;
-  try {
-    remix = JSON.parse(remixJSONText);
-  } catch(e) {
-    alert('Invalid JSON! Check your remix ingredients formatting.');
-    return;
-  }
-
-  const characters = Array.isArray(remix.characters) ? remix.characters.join(', ') : (remix.characters || '');
-  
-  const res = await fetch('/remix',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      video_link: videoLink,
-      original_prompt: remix.original_prompt || '',
-      characters: characters,
-      style: remix.style || '',
-      lighting: remix.lighting || '',
-      camera: remix.camera || '',
-      music: remix.music || '',
-      mood: remix.mood || ''
-    })
-  });
-  const data = await res.json();
-  latestPrompts = [data];
-  const box = document.getElementById('results');
-  box.innerHTML = `
-    <h2>🔥 REMIX READY</h2>
-    <h3>Original Video:</h3>
-    <pre id="remixOriginal">${data.original_video || 'N/A'}</pre>
-    <button class="copy" onclick="copyText('remixOriginal')">Copy</button>
-    <h3>Remix Config:</h3>
-    <pre id="remixConfig">${JSON.stringify(data.remix_config, null, 2)}</pre>
-    <button class="copy" onclick="copyText('remixConfig')">Copy</button>
-    <h3>🎬 Sora Prompt (Copy This):</h3>
-    <pre id="remixOut">${data.sora_prompt}</pre>
-    <button class="copy" onclick="copyText('remixOut')">Copy Remix Prompt</button>
-  `;
-});
-
-document.getElementById('savePreset').addEventListener('click', ()=>{
-  const presetName = prompt('Name your remix preset:');
-  if(!presetName) return;
-  
-  const preset = {
-    soraLink: document.getElementById('videoLink').value,
-    remix: document.getElementById('remixJSON').value
-  };
-  
-  localStorage.setItem('remix_preset_' + presetName, JSON.stringify(preset));
-  alert('Remix preset saved: ' + presetName);
-});
-
-document.getElementById('loadPreset').addEventListener('click', ()=>{
-  const presetName = prompt('Enter remix preset name to load:');
-  if(!presetName) return;
-  
-  const preset = localStorage.getItem('remix_preset_' + presetName);
-  if(!preset){
-    alert('Remix preset not found!');
-    return;
-  }
-  
-  const data = JSON.parse(preset);
-  document.getElementById('videoLink').value = data.soraLink || '';
-  document.getElementById('remixJSON').value = data.remix || '';
-  alert('Remix preset loaded: ' + presetName);
 });
 </script>
 </body>

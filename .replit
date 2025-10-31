@@ -1,5 +1,5 @@
 entrypoint = "main.py"
-modules = ["python-3.11", "postgresql-16"]
+modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
@@ -16,7 +16,6 @@ deploymentTarget = "cloudrun"
 
 [agent]
 expertMode = true
-integrations = ["python_openai_ai_integrations:1.0.0"]
 
 [workflows]
 runButton = "Project"
@@ -51,7 +50,7 @@ localPort = 33809
 externalPort = 3002
 
 [[ports]]
-localPort = 40409
+localPort = 40363
 externalPort = 3003
 
 [[ports]]
