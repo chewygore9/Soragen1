@@ -17,6 +17,19 @@ if AI_ENABLED:
 else:
     client = None
 
+# ==== SORA API SETUP ====
+SORA_ENABLED = os.environ.get("SORA_API_KEY") is not None
+SORA_API_KEY = os.environ.get("SORA_API_KEY")
+if SORA_ENABLED:
+    # Sora uses OpenAI client but with specific endpoint
+    sora_client = OpenAI(
+        api_key=SORA_API_KEY,
+        # Sora API endpoint - may need adjustment when API is public
+        base_url="https://api.openai.com/v1"
+    )
+else:
+    sora_client = None
+
 # ==== DATABASE SETUP ====
 DB_ENABLED = False  # Start with disabled
 DB_URL = os.environ.get('DATABASE_URL')
