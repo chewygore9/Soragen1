@@ -577,52 +577,69 @@ def download():
 
 @app.route("/generate", methods=["POST"])
 def generate_video():
-    """Simple, streamlined video generation endpoint"""
-    try:
-        data = request.get_json()
-        prompt = data.get("prompt")
-        duration = data.get("duration", 10)
-        resolution = data.get("resolution", "720p")
-        api_key = data.get("api_key")  # Optional - can use env var
-        
-        if not prompt:
-            return jsonify({"error": "Prompt is required"}), 400
-        
-        # Use provided API key or environment variable
-        key_to_use = api_key or os.environ.get("KIE_API_KEY")
-        
-        if not key_to_use:
-            return jsonify({"error": "API key required. Set KIE_API_KEY env var or provide in request"}), 400
-        
-        # Call Kie.AI Sora 2 Pro API
-        response = requests.post(
-            "https://api.kie.ai/v1/sora",
-            headers={
-                "Authorization": f"Bearer {key_to_use}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "sora-2-pro",
-                "prompt": prompt,
-                "duration": duration,
-                "resolution": resolution
-            },
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            # Return simplified response
-            return jsonify({
-                "url": result.get("url"),
-                "job_id": result.get("job_id"),
-                "status": "processing" if result.get("job_id") else "completed"
-            })
-        else:
-            return jsonify({"error": f"API error: {response.status_code}"}), response.status_code
+    """Improved video generation with multiple endpoint fallback"""
+    data = request.get_json()
+    prompt = data.get("prompt")
+    duration = data.get("duration", 10)
+    resolution = data.get("resolution", "720p")
+    api_key = data.get("api_key")  # Optional - can use env var
+    
+    if not prompt:
+        return jsonify({"error": "Prompt is required"}), 400
+    
+    # Use provided API key or environment variable
+    key_to_use = api_key or os.environ.get("KIE_API_KEY")
+    
+    if not key_to_use:
+        return jsonify({"error": "API key required. Set KIE_API_KEY env var or provide in request"}), 400
+    
+    # Try multiple Kie.AI endpoints
+    KIE_URLS = [
+        "https://api.kie.ai/v1/videos",          # main endpoint
+        "https://api.kie.ai/v1/sora2pro",        # alt 1
+        "https://api.kie.ai/v1/sora2pro/generate", # alt 2
+        "https://api.kie.ai/v1/sora"             # original
+    ]
+    
+    payload = {
+        "model": "sora-2-pro",
+        "prompt": prompt,
+        "duration": duration,
+        "resolution": resolution
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {key_to_use}",
+        "Content-Type": "application/json"
+    }
+    
+    # Try each endpoint until one works
+    for url in KIE_URLS:
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
             
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            # If we get anything other than 404, return the result
+            if response.status_code != 404:
+                if response.status_code == 200:
+                    result = response.json()
+                    return jsonify({
+                        "url": result.get("url"),
+                        "job_id": result.get("job_id"),
+                        "status": "processing" if result.get("job_id") else "completed"
+                    })
+                else:
+                    # Return the actual error from the API
+                    return jsonify(response.json()), response.status_code
+                    
+        except requests.exceptions.Timeout:
+            print(f"Timeout on endpoint: {url}")
+            continue
+        except Exception as e:
+            print(f"Endpoint failed: {url}, Error: {e}")
+            continue
+    
+    # If all endpoints returned 404
+    return jsonify({"error": "All API endpoints returned 404. The API structure may have changed."}), 404
 
 @app.route("/api/sora-generate", methods=["POST"])
 def sora_generate_kieai():

@@ -1,0 +1,135 @@
+# app.py — Sora Wild Style Generator Flask Server
+
+from flask import Flask, request, jsonify, render_template_string
+import requests, os
+from dotenv import load_dotenv
+
+load_dotenv()
+app = Flask(__name__)
+
+# ==============================================================
+# CONFIG
+# ==============================================================
+
+KIE_API_KEY = os.getenv("KIE_API_KEY")
+KIE_URLS = [
+    "https://api.kie.ai/v1/videos",          # main endpoint
+    "https://api.kie.ai/v1/sora2pro",        # alt 1
+    "https://api.kie.ai/v1/sora2pro/generate" # alt 2
+]
+
+# ==============================================================
+# BASIC FRONTEND ROUTE
+# ==============================================================
+
+@app.route("/simple", methods=["GET"])
+def simple_ui():
+    html = """
+    <html>
+    <head><title>Sora Wild Style Generator</title></head>
+    <body style="background:black;color:lime;font-family:monospace;">
+        <h1>🚀 SORA Wild Style Generator - Simple Mode</h1>
+        <form id="form">
+            <input name="prompt" placeholder="Type your prompt here" style="width:400px"/><br><br>
+            <label>Duration:</label>
+            <select name="duration">
+                <option value="10">10s</option>
+                <option value="15">15s</option>
+            </select>
+            <label>Resolution:</label>
+            <select name="resolution">
+                <option value="720p">720p</option>
+                <option value="1080p">1080p</option>
+            </select><br><br>
+            <button type="submit">🎬 Generate Video</button>
+        </form>
+        <pre id="output"></pre>
+        <video id="vid" controls style="max-width:80%;display:none;"></video>
+
+        <script>
+        const form = document.getElementById("form");
+        const out = document.getElementById("output");
+        const vid = document.getElementById("vid");
+
+        form.onsubmit = async e => {
+            e.preventDefault();
+            const data = {
+                prompt: form.prompt.value,
+                duration: parseInt(form.duration.value),
+                resolution: form.resolution.value
+            };
+            out.textContent = "⏳ Generating video...";
+            try {
+                const res = await fetch("/generate", {
+                    method: "POST",
+                    headers: {"Content-Type":"application/json"},
+                    body: JSON.stringify(data)
+                });
+                const json = await res.json();
+                if(json.url){
+                    out.textContent = "✅ Video generated!";
+                    vid.src = json.url;
+                    vid.style.display = "block";
+                } else {
+                    out.textContent = "❌ Error: " + JSON.stringify(json);
+                }
+            } catch(err){
+                out.textContent = "⚠️ Error: " + err;
+            }
+        };
+        </script>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
+
+# ==============================================================
+# GENERATE ROUTE
+# ==============================================================
+
+@app.route("/generate", methods=["POST"])
+def generate_video():
+    data = request.get_json()
+    prompt = data.get("prompt")
+    duration = data.get("duration", 10)
+    resolution = data.get("resolution", "720p")
+
+    if not KIE_API_KEY:
+        return jsonify({"error": "Missing KIE_API_KEY"}), 400
+
+    payload = {
+        "model": "sora-2-pro",
+        "prompt": prompt,
+        "duration": duration,
+        "resolution": resolution
+    }
+
+    headers = {
+        "Authorization": f"Bearer {KIE_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    for url in KIE_URLS:
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            if resp.status_code != 404:
+                return jsonify(resp.json()), resp.status_code
+        except Exception as e:
+            print("Endpoint failed:", url, e)
+
+    return jsonify({"error": "All API endpoints returned 404"}), 404
+
+# ==============================================================
+# ROOT
+# ==============================================================
+
+@app.route("/", methods=["GET"])
+def home():
+    return "<h3 style='color:lime'>Sora Flask API online 🚀</h3><p>Go to <a href='/simple'>/simple</a> to use the UI.</p>"
+
+# ==============================================================
+# MAIN
+# ==============================================================
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)
