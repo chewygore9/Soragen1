@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snap Style Remix Station 🔥</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: radial-gradient(circle at 30% 30%, #0f0f0f, #000);
+      color: #00ffcc;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #ff3eff;
+      text-shadow: 0 0 10px #ff3eff;
+    }
+    select, button {
+      margin: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      background: #111;
+      color: #00ffcc;
+      outline: 1px solid #00ffcc;
+    }
+    button:hover {
+      background: #00ffcc;
+      color: #000;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    pre {
+      background: #111;
+      color: #00ffcc;
+      border: 1px solid #00ffcc;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 8px;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+    .footer {
+      margin-top: 2rem;
+      color: #888;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 Snap Style Remix Station 🔥</h1>
+  <p>Generate short-form chaos for Sora or Snapchat with Tyrone’s wild energy.</p>
+
+  <div>
+    <label>Personality Level:</label>
+    <select id="personality">
+      <option value="calm">Calm</option>
+      <option value="witty">Witty</option>
+      <option value="unhinged">Unhinged</option>
+    </select>
+
+    <label>Duration (sec):</label>
+    <select id="duration">
+      <option value="10">10</option>
+      <option value="15">15</option>
+      <option value="20">20</option>
+      <option value="30">30</option>
+    </select>
+  </div>
+
+  <button id="generateBtn">🎬 Generate Snap Prompt</button>
+
+  <pre id="output"></pre>
+
+  <div class="footer">
+    Built by <b>Master Blaster & Tyrone</b> — Augment3D inK 2025
+  </div>
+
+  <script>
+    const data = {
+      theme: ["Urban Neon","Vintage Film","Cyberpunk","Wild Nature","Abstract Glitch"],
+      lighting_style: ["Bright Daylight","Moody Sunset","Neon Glow","Silhouette Backlit","Spotlight Dramatic"],
+      camera_effects: ["Fast Zooms","Whip Pan","Jump Cut","Slow Motion","Time-Lapse"],
+      visual_style: ["Graffiti Overlay","Chromatic Aberration","Film Grain","Flat Minimal","High Contrast B&W"],
+      audio_style: ["Beat Drop Intro","Spoken Word SFX","Ambient Rise","Voice Echo","Silence Then Boom"],
+      text_overlay_style: ["Bold Allcaps","Handwritten Scribbles","Glowing Neon Text","Minimal Subtitle","Comic Bubble"],
+      call_to_action: ["Swipe Up!","Join the Ride!","Don’t Miss Out!","Catch the Drift!","Let’s Go!"]
+    };
+
+    const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+    function generatePrompt() {
+      const personality = document.getElementById('personality').value;
+      const duration = document.getElementById('duration').value;
+      const theme = pick(data.theme);
+      const lighting = pick(data.lighting_style);
+      const camera = pick(data.camera_effects);
+      const visual = pick(data.visual_style);
+      const audio = pick(data.audio_style);
+      const textStyle = pick(data.text_overlay_style);
+      const cta = pick(data.call_to_action);
+
+      let vibe = "";
+      if (personality === "calm")
+        vibe = "Relaxed and cinematic, smooth transitions, natural tone.";
+      else if (personality === "witty")
+        vibe = "Playful rhythm, quick cuts, tongue-in-cheek narration, sharp one-liners.";
+      else
+        vibe = "Chaotic and explosive, jump cuts, wild camera motion, unfiltered energy!";
+
+      const output = `
+[Sora Video Prompt - Snap Remix]
+Duration: ${duration}s
+Theme: ${theme}
+Lighting: ${lighting}
+Camera: ${camera}
+Visual: ${visual}
+Audio: ${audio}
+Text Overlay: ${textStyle}
+Personality: ${personality.toUpperCase()}
+Call To Action: ${cta}
+
+Scene Description:
+Fast-cut ${theme.toLowerCase()} vibe with ${lighting.toLowerCase()} lighting and ${camera.toLowerCase()} camera work.
+Add ${visual.toLowerCase()} visuals with ${audio.toLowerCase()} soundtrack.
+Text styled as ${textStyle.toLowerCase()} flashes with '${cta}'.
+Vibe: ${vibe}
+
+Narration (Tyrone style):
+"Yo it's ${theme} energy, baby! Snap it, spin it, send it—${cta}"
+`;
+      document.getElementById('output').textContent = output;
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', generatePrompt);
+  </script>
+</body>
+</html>

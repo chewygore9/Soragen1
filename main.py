@@ -18,19 +18,49 @@ else:
     client = None
 
 # ==== DATABASE SETUP ====
-DB_ENABLED = os.environ.get('DATABASE_URL') is not None
+DB_ENABLED = False  # Start with disabled
+DB_URL = os.environ.get('DATABASE_URL')
+
+def test_db_connection():
+    """Test if database is actually available"""
+    global DB_ENABLED
+    if not DB_URL:
+        print("No DATABASE_URL found - database features disabled")
+        DB_ENABLED = False
+        return False
+    
+    try:
+        conn = psycopg2.connect(DB_URL, connect_timeout=3)
+        conn.close()
+        DB_ENABLED = True
+        print("Database connection successful")
+        return True
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        print("App will run without database features")
+        DB_ENABLED = False
+        return False
 
 def get_db_connection():
-    if not DB_ENABLED:
+    if not DB_ENABLED or not DB_URL:
         return None
-    conn = psycopg2.connect(os.environ['DATABASE_URL'])
-    return conn
+    try:
+        conn = psycopg2.connect(DB_URL)
+        return conn
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return None
 
 def init_db():
-    if not DB_ENABLED:
+    """Initialize database if available"""
+    if not test_db_connection():
         return
+    
     try:
         conn = get_db_connection()
+        if not conn:
+            return
+            
         cur = conn.cursor()
         cur.execute('''
             CREATE TABLE IF NOT EXISTS custom_characters (
@@ -42,9 +72,12 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
+        print("Database tables initialized successfully")
     except Exception as e:
         print(f"Database initialization warning: {e}")
+        DB_ENABLED = False
 
+# Initialize database but don't crash if it fails
 init_db()
 
 # ==== PROMPT BANKS ====
@@ -332,7 +365,7 @@ def remix():
 @app.route("/save_characters", methods=["POST"])
 def save_characters():
     if not DB_ENABLED:
-        return jsonify({"error": "Database not configured"}), 503
+        return jsonify({"message": "Database temporarily unavailable - characters not saved", "saved": [], "skipped": []}), 200
     
     data = request.get_json()
     characters = data.get("characters", "")
@@ -341,52 +374,75 @@ def save_characters():
     if not char_list:
         return jsonify({"error": "No characters provided"}), 400
     
-    conn = get_db_connection()
-    cur = conn.cursor()
-    saved = []
-    skipped = []
-    
-    for char in char_list:
-        try:
-            cur.execute("INSERT INTO custom_characters (character_name) VALUES (%s)", (char,))
-            conn.commit()
-            saved.append(char)
-        except psycopg2.IntegrityError:
-            conn.rollback()
-            skipped.append(char)
-    
-    cur.close()
-    conn.close()
-    
-    # Better messaging
-    if len(saved) > 0 and len(skipped) > 0:
-        message = f"✅ Saved {len(saved)} new character(s). ⚠️ {len(skipped)} already in database: {', '.join(skipped)}"
-    elif len(saved) > 0:
-        message = f"✅ Saved {len(saved)} character(s) successfully!"
-    elif len(skipped) > 0:
-        message = f"ℹ️ All {len(skipped)} character(s) already exist in database: {', '.join(skipped)}"
-    else:
-        message = "No characters processed."
-    
-    return jsonify({
-        "saved": saved,
-        "skipped": skipped,
-        "message": message
-    })
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"message": "Database temporarily unavailable - characters not saved", "saved": [], "skipped": []}), 200
+            
+        cur = conn.cursor()
+        saved = []
+        skipped = []
+        
+        for char in char_list:
+            try:
+                cur.execute("INSERT INTO custom_characters (character_name) VALUES (%s)", (char,))
+                conn.commit()
+                saved.append(char)
+            except psycopg2.IntegrityError:
+                conn.rollback()
+                skipped.append(char)
+        
+        cur.close()
+        conn.close()
+        
+        # Better messaging
+        if len(saved) > 0 and len(skipped) > 0:
+            message = f"✅ Saved {len(saved)} new character(s). ⚠️ {len(skipped)} already in database: {', '.join(skipped)}"
+        elif len(saved) > 0:
+            message = f"✅ Saved {len(saved)} character(s) successfully!"
+        elif len(skipped) > 0:
+            message = f"ℹ️ All {len(skipped)} character(s) already exist in database: {', '.join(skipped)}"
+        else:
+            message = "No characters processed."
+        
+        return jsonify({
+            "saved": saved,
+            "skipped": skipped,
+            "message": message
+        })
+    except Exception as e:
+        print(f"Error in save_characters: {e}")
+        return jsonify({"message": "Database temporarily unavailable - characters not saved", "saved": [], "skipped": []}), 200
 
 @app.route("/get_characters", methods=["GET"])
 def get_characters():
     if not DB_ENABLED:
-        return jsonify({"characters": []})
+        # Return default saved characters when DB is unavailable
+        default_chars = ["@obesewith.cookie", "@obesewith.teefred", "@obesewith.yerm", 
+                        "@obesewith.jamarcus", "@obesewith.munky", "@obesewith.glassy"]
+        return jsonify({"characters": default_chars})
     
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT character_name, created_at FROM custom_characters ORDER BY created_at DESC")
-    characters = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    return jsonify({"characters": [c["character_name"] for c in characters]})
+    try:
+        conn = get_db_connection()
+        if not conn:
+            # Return default chars if connection fails
+            default_chars = ["@obesewith.cookie", "@obesewith.teefred", "@obesewith.yerm", 
+                            "@obesewith.jamarcus", "@obesewith.munky", "@obesewith.glassy"]
+            return jsonify({"characters": default_chars})
+            
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT character_name, created_at FROM custom_characters ORDER BY created_at DESC")
+        characters = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify({"characters": [c["character_name"] for c in characters]})
+    except Exception as e:
+        print(f"Error in get_characters: {e}")
+        # Return default chars on error
+        default_chars = ["@obesewith.cookie", "@obesewith.teefred", "@obesewith.yerm", 
+                        "@obesewith.jamarcus", "@obesewith.munky", "@obesewith.glassy"]
+        return jsonify({"characters": default_chars})
 
 @app.route("/download", methods=["POST"])
 def download():
@@ -411,5 +467,5 @@ def download():
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/json")
 
 if __name__ == '__main__':
-    # Disable auto-reload to prevent app from restarting when switching apps
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    # Run in production mode for stability - no debug, no reloader
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
