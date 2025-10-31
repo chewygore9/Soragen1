@@ -20,6 +20,7 @@ textarea {height:100px; resize:vertical;}
 <button id="gen">Generate Two Prompts</button>
 <button id="aiGen">🤖 AI Generate (GPT-4)</button>
 <button id="cycle">🎨 Style Cycler (5 Variants)</button>
+<button id="snapRemix">🔥 Snap Remix (Tyrone Style)</button>
 <button id="remixToggle">🔄 Remix Mode</button>
 <button id="download">⬇️ Download JSON File</button>
 <p>Project Notes (optional):</p>
@@ -196,6 +197,53 @@ document.getElementById('cycle').addEventListener('click', async ()=>{
 document.getElementById('remixToggle').addEventListener('click', ()=>{
   const section = document.getElementById('remixSection');
   section.classList.toggle('active');
+});
+
+// Snap Remix functionality
+document.getElementById('snapRemix').addEventListener('click', async ()=>{
+  const box = document.getElementById('results');
+  box.innerHTML = '<div style="text-align:center;">🔥 GENERATING SNAP REMIX...</div>';
+  
+  // Show personality selector
+  const personalities = ['calm', 'witty', 'unhinged'];
+  const selectedPersonality = prompt('Choose personality:\n- calm (smooth cinematic)\n- witty (sarcastic comedy)\n- unhinged (pure chaos)\n\nEnter: calm, witty, or unhinged', 'unhinged');
+  
+  const personality = personalities.includes(selectedPersonality) ? selectedPersonality : 'unhinged';
+  
+  const res = await fetch('/snap_remix', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({personality: personality})
+  });
+  
+  const data = await res.json();
+  latestPrompts = [data];
+  
+  box.innerHTML = `
+    <h2>🔥 SNAP REMIX - ${data.personality.toUpperCase()} MODE</h2>
+    <h3>🎬 Scene:</h3>
+    <pre id="snapScene">${data.scene}</pre>
+    <button class="copy" onclick="copyText('snapScene')">Copy Scene</button>
+    
+    <h3>👥 Characters:</h3>
+    <pre id="snapChars">${data.characters.join(', ')}</pre>
+    <button class="copy" onclick="copyText('snapChars')">Copy Characters</button>
+    
+    <h3>⚙️ Config:</h3>
+    <pre id="snapConfig">Duration: ${data.duration}s
+Theme: ${data.theme}
+Lighting: ${data.config.lighting}
+Camera: ${data.config.camera}
+Visual: ${data.config.visual}
+Audio: ${data.config.audio}
+Text Style: ${data.config.text_style}
+Call To Action: ${data.config.cta}</pre>
+    <button class="copy" onclick="copyText('snapConfig')">Copy Config</button>
+    
+    <h3>🎯 SORA PROMPT (Copy This!):</h3>
+    <pre id="snapPrompt" style="background:#111; border:3px solid #f0f;">${data.sora_prompt}</pre>
+    <button class="copy" onclick="copyText('snapPrompt')" style="font-size:1.2em; padding:15px;">🔥 COPY SNAP REMIX PROMPT</button>
+  `;
 });
 
 document.getElementById('remixBtn').addEventListener('click', () => {
