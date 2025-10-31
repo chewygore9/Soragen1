@@ -206,6 +206,11 @@ def generate_prompt():
 def index():
     return render_template('index.html')
 
+@app.route('/simple')
+def simple():
+    """Simple, streamlined video generation interface"""
+    return render_template('simple.html')
+
 @app.route('/snap-standalone')
 def snap_standalone():
     """Serve the standalone Snap Remix Station"""
@@ -569,6 +574,55 @@ def download():
     buffer.write(json_str.encode("utf-8"))
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/json")
+
+@app.route("/generate", methods=["POST"])
+def generate_video():
+    """Simple, streamlined video generation endpoint"""
+    try:
+        data = request.get_json()
+        prompt = data.get("prompt")
+        duration = data.get("duration", 10)
+        resolution = data.get("resolution", "720p")
+        api_key = data.get("api_key")  # Optional - can use env var
+        
+        if not prompt:
+            return jsonify({"error": "Prompt is required"}), 400
+        
+        # Use provided API key or environment variable
+        key_to_use = api_key or os.environ.get("KIE_API_KEY")
+        
+        if not key_to_use:
+            return jsonify({"error": "API key required. Set KIE_API_KEY env var or provide in request"}), 400
+        
+        # Call Kie.AI Sora 2 Pro API
+        response = requests.post(
+            "https://api.kie.ai/v1/sora",
+            headers={
+                "Authorization": f"Bearer {key_to_use}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "sora-2-pro",
+                "prompt": prompt,
+                "duration": duration,
+                "resolution": resolution
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            # Return simplified response
+            return jsonify({
+                "url": result.get("url"),
+                "job_id": result.get("job_id"),
+                "status": "processing" if result.get("job_id") else "completed"
+            })
+        else:
+            return jsonify({"error": f"API error: {response.status_code}"}), response.status_code
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/sora-generate", methods=["POST"])
 def sora_generate_kieai():
