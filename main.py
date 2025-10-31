@@ -1,7 +1,51 @@
 from flask import Flask, render_template, jsonify, request, send_file
-import random, json, io
+from datetime import datetime
+import random, json, io, os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from openai import OpenAI
 
 app = Flask(__name__)
+
+# ==== OPENAI SETUP ====
+AI_ENABLED = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY") is not None
+if AI_ENABLED:
+    client = OpenAI(
+        api_key=os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY"),
+        base_url=os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
+    )
+else:
+    client = None
+
+# ==== DATABASE SETUP ====
+DB_ENABLED = os.environ.get('DATABASE_URL') is not None
+
+def get_db_connection():
+    if not DB_ENABLED:
+        return None
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    return conn
+
+def init_db():
+    if not DB_ENABLED:
+        return
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS custom_characters (
+                id SERIAL PRIMARY KEY,
+                character_name TEXT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Database initialization warning: {e}")
+
+init_db()
 
 # ==== PROMPT BANKS ====
 scene_options = [
@@ -62,14 +106,14 @@ style_options = [
 ]
 
 dialogue_options = [
-    "\"You ever seen smoke argue back? That's when I knew I was chosen.\"",
-    "\"Down here, loyalty's like gator teeth — sharp till it breaks.\"",
-    "\"I ain't paranoid if they really cloning me.\"",
-    "\"Sometimes I dream in 480p, bro.\"",
-    "\"Munky, stop touching buttons you don't understand!\"",
-    "\"If it's glowing, that means it's money… or radiation.\"",
-    "\"This swamp got more secrets than my search history.\"",
-    "\"They told me I couldn't be two things at once — so I became three.\""
+    "You ever seen smoke argue back? That's when I knew I was chosen.",
+    "Down here, loyalty's like gator teeth — sharp till it breaks.",
+    "I ain't paranoid if they really cloning me.",
+    "Sometimes I dream in 480p, bro.",
+    "Munky, stop touching buttons you don't understand!",
+    "If it's glowing, that means it's money… or radiation.",
+    "This swamp got more secrets than my search history.",
+    "They told me I couldn't be two things at once — so I became three."
 ]
 
 sound_options = [
@@ -154,11 +198,213 @@ def cycle():
         "variants": variants
     })
 
+@app.route("/ai_generate", methods=["POST"])
+def ai_generate():
+    if not AI_ENABLED:
+        return jsonify({"error": "AI generation not available"}), 503
+    
+    try:
+        system_prompt = """You are a creative prompt generator for SORA AI video generation.
+Generate wild, surreal, cinematic prompts with a cyberpunk-bayou-noir aesthetic.
+Mix absurd humor with cinematic visuals. Characters often include @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred.
+Think: swamp cyberpunk, neon gators, trap beats with frogs, cosmic loyalty tests, microwave negotiations.
+Be weird, creative, and unexpected but keep it coherent enough to visualize."""
+
+        user_prompt = """Generate 2 unique SORA video prompts. Each should include:
+- scene: A bizarre but vivid scenario
+- cameos: 1-4 character handles (use @obesewith.munky, @obesewith.glassy, @obesewith.yerm, @obesewith.teefred or make up new ones)
+- camera: Creative camera movement description
+- lighting: Atmospheric lighting description
+- style: Visual style/aesthetic
+- dialogue: One memorable quote from the scene
+- sound: Audio/music description
+- mood: Overall emotional vibe
+
+Return JSON in this exact structure:
+{
+  "prompts": [
+    {
+      "model": "sora-2",
+      "size": "1280x720",
+      "seconds": 10,
+      "prompt": {
+        "scene": "...",
+        "cameos": ["@character1", "@character2"],
+        "camera": "...",
+        "lighting": "...",
+        "style": "...",
+        "dialogue": "...",
+        "sound": "...",
+        "mood": "..."
+      }
+    },
+    {
+      "model": "sora-2",
+      "size": "1280x720",
+      "seconds": 11,
+      "prompt": {
+        "scene": "...",
+        "cameos": ["@character3"],
+        "camera": "...",
+        "lighting": "...",
+        "style": "...",
+        "dialogue": "...",
+        "sound": "...",
+        "mood": "..."
+      }
+    }
+  ]
+}"""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=1.2
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        
+        if not isinstance(result, dict) or "prompts" not in result:
+            return jsonify({"error": "Invalid response format from AI"}), 500
+        
+        prompts = result["prompts"]
+        
+        if not isinstance(prompts, list) or len(prompts) == 0:
+            return jsonify({"error": "No prompts generated"}), 500
+        
+        return jsonify(prompts)
+        
+    except Exception as e:
+        print(f"AI generation error: {e}")
+        return jsonify({"error": f"AI generation failed: {str(e)}"}), 500
+
+@app.route("/remix", methods=["POST"])
+def remix():
+    data = request.get_json()
+    video_link = data.get("video_link", "")
+    original_prompt = data.get("original_prompt", "")
+    characters = data.get("characters", "")
+    style = data.get("style", "")
+    lighting = data.get("lighting", "")
+    camera = data.get("camera", "")
+    music = data.get("music", "")
+    mood = data.get("mood", "")
+    
+    char_list = [c.strip() for c in characters.split(",")] if characters else []
+    
+    remix_config = {
+        "characters": char_list,
+        "style": style or "original style",
+        "lighting": lighting or "original lighting",
+        "camera": camera or "original camera work",
+        "music": music or "original soundtrack",
+        "mood": mood or "original mood"
+    }
+    
+    sora_prompt = f"Recreate the following scene with these modifications:\n\n"
+    sora_prompt += f"ORIGINAL: {original_prompt}\n\n"
+    sora_prompt += f"REMIX SETTINGS:\n"
+    if char_list:
+        sora_prompt += f"- Replace characters with: {', '.join(char_list)}\n"
+    if style:
+        sora_prompt += f"- Style: {style}\n"
+    if lighting:
+        sora_prompt += f"- Lighting: {lighting}\n"
+    if camera:
+        sora_prompt += f"- Camera: {camera}\n"
+    if music:
+        sora_prompt += f"- Music/Sound: {music}\n"
+    if mood:
+        sora_prompt += f"- Mood: {mood}\n"
+    sora_prompt += f"\nKeep the core scene and pacing, but apply these creative treatments to make it fresh."
+    
+    return jsonify({
+        "original_video": video_link,
+        "remix_version": f"{char_list[0] if char_list else 'Unknown'} Cinematic Remix",
+        "remix_config": remix_config,
+        "sora_prompt": sora_prompt
+    })
+
+@app.route("/save_characters", methods=["POST"])
+def save_characters():
+    if not DB_ENABLED:
+        return jsonify({"error": "Database not configured"}), 503
+    
+    data = request.get_json()
+    characters = data.get("characters", "")
+    char_list = [c.strip() for c in characters.split(",") if c.strip()]
+    
+    if not char_list:
+        return jsonify({"error": "No characters provided"}), 400
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    saved = []
+    skipped = []
+    
+    for char in char_list:
+        try:
+            cur.execute("INSERT INTO custom_characters (character_name) VALUES (%s)", (char,))
+            conn.commit()
+            saved.append(char)
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            skipped.append(char)
+    
+    cur.close()
+    conn.close()
+    
+    # Better messaging
+    if len(saved) > 0 and len(skipped) > 0:
+        message = f"✅ Saved {len(saved)} new character(s). ⚠️ {len(skipped)} already in database: {', '.join(skipped)}"
+    elif len(saved) > 0:
+        message = f"✅ Saved {len(saved)} character(s) successfully!"
+    elif len(skipped) > 0:
+        message = f"ℹ️ All {len(skipped)} character(s) already exist in database: {', '.join(skipped)}"
+    else:
+        message = "No characters processed."
+    
+    return jsonify({
+        "saved": saved,
+        "skipped": skipped,
+        "message": message
+    })
+
+@app.route("/get_characters", methods=["GET"])
+def get_characters():
+    if not DB_ENABLED:
+        return jsonify({"characters": []})
+    
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT character_name, created_at FROM custom_characters ORDER BY created_at DESC")
+    characters = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    return jsonify({"characters": [c["character_name"] for c in characters]})
+
 @app.route("/download", methods=["POST"])
 def download():
     data = request.get_json()
     filename = data.get("filename", "sora_prompts.json")
-    json_str = json.dumps(data.get("content", {}), indent=2)
+    notes = data.get("notes", "No notes provided.")
+    creator_info = {
+        "creator": "@obesewitherspooon",
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "notes": notes
+    }
+    
+    output = {
+        "metadata": creator_info,
+        "prompts": data.get("content", {})
+    }
+    
+    json_str = json.dumps(output, indent=2)
     buffer = io.BytesIO()
     buffer.write(json_str.encode("utf-8"))
     buffer.seek(0)
