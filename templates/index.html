@@ -208,29 +208,43 @@ document.getElementById('remixBtn').addEventListener('click', () => {
     return;
   }
 
-  // Build the remix prompt with exact format requested
+  // Check if data is nested in a "prompt" object (new Sora format) or flat
+  const promptData = remixData.prompt || remixData;
+  
+  // Build the remix prompt with clean formatting
   let remixPrompt = `🎬 Recreate the following Sora scene:\n\n`;
   remixPrompt += `🎥 Original Video: ${soraLink}\n\n`;
   remixPrompt += `🎚️ Remix Ingredients:\n`;
   
-  // Add scene if it exists (special case)
-  if (remixData.scene) {
-    remixPrompt += `• Scene: ${remixData.scene}\n`;
+  // Handle all possible fields from both formats
+  if (promptData.scene) {
+    remixPrompt += `• Scene: ${promptData.scene}\n`;
   }
-  if (remixData.sound) {
-    remixPrompt += `• Sound: ${remixData.sound}\n`;
+  if (promptData.cameos && Array.isArray(promptData.cameos)) {
+    remixPrompt += `• Cameos: ${promptData.cameos.join(', ')}\n`;
   }
-  if (remixData.style) {
-    remixPrompt += `• Style: ${remixData.style}\n`;
+  if (promptData.dialogue) {
+    remixPrompt += `• Dialogue: "${promptData.dialogue}"\n`;
   }
-  if (remixData.lighting) {
-    remixPrompt += `• Lighting: ${remixData.lighting}\n`;
+  if (promptData.camera) {
+    remixPrompt += `• Camera: ${promptData.camera}\n`;
   }
-  if (remixData.camera) {
-    remixPrompt += `• Camera: ${remixData.camera}\n`;
+  if (promptData.sound) {
+    remixPrompt += `• Sound: ${promptData.sound}\n`;
   }
-  if (remixData.mood) {
-    remixPrompt += `• Mood: ${remixData.mood}\n`;
+  if (promptData.style) {
+    remixPrompt += `• Style: ${promptData.style}\n`;
+  }
+  if (promptData.lighting) {
+    remixPrompt += `• Lighting: ${promptData.lighting}\n`;
+  }
+  if (promptData.mood) {
+    remixPrompt += `• Mood: ${promptData.mood}\n`;
+  }
+  
+  // Handle root-level properties (seconds, size, model)
+  if (remixData.model) {
+    remixPrompt += `• Model: ${remixData.model}\n`;
   }
   if (remixData.seconds) {
     remixPrompt += `• Seconds: ${remixData.seconds}\n`;
