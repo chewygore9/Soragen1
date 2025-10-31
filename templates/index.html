@@ -111,8 +111,20 @@ async function getPrompts(){
 
 function copyText(id){
   const el = document.getElementById(id);
-  navigator.clipboard.writeText(el.innerText);
-  alert('Copied to clipboard!');
+  // Handle both textarea (value) and pre/div elements (innerText)
+  const text = el.value || el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Copied to clipboard!');
+  }).catch(err => {
+    // Fallback for older browsers or permission issues
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Copied to clipboard!');
+  });
 }
 
 document.getElementById('gen').addEventListener('click', getPrompts);
