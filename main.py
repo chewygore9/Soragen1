@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify, request, send_file
 from datetime import datetime
-import random, json, io, os, requests
+import random, json, io, os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from openai import OpenAI
@@ -17,63 +17,20 @@ if AI_ENABLED:
 else:
     client = None
 
-# ==== SORA API SETUP ====
-SORA_ENABLED = os.environ.get("SORA_API_KEY") is not None
-SORA_API_KEY = os.environ.get("SORA_API_KEY")
-if SORA_ENABLED:
-    # Sora uses OpenAI client but with specific endpoint
-    sora_client = OpenAI(
-        api_key=SORA_API_KEY,
-        # Sora API endpoint - may need adjustment when API is public
-        base_url="https://api.openai.com/v1"
-    )
-else:
-    sora_client = None
-
 # ==== DATABASE SETUP ====
-DB_ENABLED = False  # Start with disabled
-DB_URL = os.environ.get('DATABASE_URL')
-
-def test_db_connection():
-    """Test if database is actually available"""
-    global DB_ENABLED
-    if not DB_URL:
-        print("No DATABASE_URL found - database features disabled")
-        DB_ENABLED = False
-        return False
-    
-    try:
-        conn = psycopg2.connect(DB_URL, connect_timeout=3)
-        conn.close()
-        DB_ENABLED = True
-        print("Database connection successful")
-        return True
-    except Exception as e:
-        print(f"Database connection failed: {e}")
-        print("App will run without database features")
-        DB_ENABLED = False
-        return False
+DB_ENABLED = os.environ.get('DATABASE_URL') is not None
 
 def get_db_connection():
-    if not DB_ENABLED or not DB_URL:
+    if not DB_ENABLED:
         return None
-    try:
-        conn = psycopg2.connect(DB_URL)
-        return conn
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        return None
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    return conn
 
 def init_db():
-    """Initialize database if available"""
-    if not test_db_connection():
+    if not DB_ENABLED:
         return
-    
     try:
         conn = get_db_connection()
-        if not conn:
-            return
-            
         cur = conn.cursor()
         cur.execute('''
             CREATE TABLE IF NOT EXISTS custom_characters (
@@ -85,12 +42,9 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        print("Database tables initialized successfully")
     except Exception as e:
         print(f"Database initialization warning: {e}")
-        DB_ENABLED = False
 
-# Initialize database but don't crash if it fails
 init_db()
 
 # ==== PROMPT BANKS ====
@@ -205,16 +159,6 @@ def generate_prompt():
 @app.route('/')
 def index():
     return render_template('index.html')
-
-@app.route('/simple')
-def simple():
-    """Simple, streamlined video generation interface"""
-    return render_template('simple.html')
-
-@app.route('/snap-standalone')
-def snap_standalone():
-    """Serve the standalone Snap Remix Station"""
-    return send_file('snap_remix_standalone.html')
 
 @app.route('/generate')
 def generate():
@@ -388,7 +332,7 @@ def remix():
 @app.route("/save_characters", methods=["POST"])
 def save_characters():
     if not DB_ENABLED:
-        return jsonify({"message": "Database temporarily unavailable - characters not saved", "saved": [], "skipped": []}), 200
+        return jsonify({"error": "Database not configured"}), 503
     
     data = request.get_json()
     characters = data.get("characters", "")
@@ -397,161 +341,52 @@ def save_characters():
     if not char_list:
         return jsonify({"error": "No characters provided"}), 400
     
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"message": "Database temporarily unavailable - characters not saved", "saved": [], "skipped": []}), 200
-            
-        cur = conn.cursor()
-        saved = []
-        skipped = []
-        
-        for char in char_list:
-            try:
-                cur.execute("INSERT INTO custom_characters (character_name) VALUES (%s)", (char,))
-                conn.commit()
-                saved.append(char)
-            except psycopg2.IntegrityError:
-                conn.rollback()
-                skipped.append(char)
-        
-        cur.close()
-        conn.close()
-        
-        # Better messaging
-        if len(saved) > 0 and len(skipped) > 0:
-            message = f"✅ Saved {len(saved)} new character(s). ⚠️ {len(skipped)} already in database: {', '.join(skipped)}"
-        elif len(saved) > 0:
-            message = f"✅ Saved {len(saved)} character(s) successfully!"
-        elif len(skipped) > 0:
-            message = f"ℹ️ All {len(skipped)} character(s) already exist in database: {', '.join(skipped)}"
-        else:
-            message = "No characters processed."
-        
-        return jsonify({
-            "saved": saved,
-            "skipped": skipped,
-            "message": message
-        })
-    except Exception as e:
-        print(f"Error in save_characters: {e}")
-        return jsonify({"message": "Database temporarily unavailable - characters not saved", "saved": [], "skipped": []}), 200
+    conn = get_db_connection()
+    cur = conn.cursor()
+    saved = []
+    skipped = []
+    
+    for char in char_list:
+        try:
+            cur.execute("INSERT INTO custom_characters (character_name) VALUES (%s)", (char,))
+            conn.commit()
+            saved.append(char)
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            skipped.append(char)
+    
+    cur.close()
+    conn.close()
+    
+    # Better messaging
+    if len(saved) > 0 and len(skipped) > 0:
+        message = f"✅ Saved {len(saved)} new character(s). ⚠️ {len(skipped)} already in database: {', '.join(skipped)}"
+    elif len(saved) > 0:
+        message = f"✅ Saved {len(saved)} character(s) successfully!"
+    elif len(skipped) > 0:
+        message = f"ℹ️ All {len(skipped)} character(s) already exist in database: {', '.join(skipped)}"
+    else:
+        message = "No characters processed."
+    
+    return jsonify({
+        "saved": saved,
+        "skipped": skipped,
+        "message": message
+    })
 
 @app.route("/get_characters", methods=["GET"])
 def get_characters():
     if not DB_ENABLED:
-        # Return default saved characters when DB is unavailable
-        default_chars = ["@obesewith.cookie", "@obesewith.teefred", "@obesewith.yerm", 
-                        "@obesewith.jamarcus", "@obesewith.munky", "@obesewith.glassy"]
-        return jsonify({"characters": default_chars})
+        return jsonify({"characters": []})
     
-    try:
-        conn = get_db_connection()
-        if not conn:
-            # Return default chars if connection fails
-            default_chars = ["@obesewith.cookie", "@obesewith.teefred", "@obesewith.yerm", 
-                            "@obesewith.jamarcus", "@obesewith.munky", "@obesewith.glassy"]
-            return jsonify({"characters": default_chars})
-            
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT character_name, created_at FROM custom_characters ORDER BY created_at DESC")
-        characters = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        return jsonify({"characters": [c["character_name"] for c in characters]})
-    except Exception as e:
-        print(f"Error in get_characters: {e}")
-        # Return default chars on error
-        default_chars = ["@obesewith.cookie", "@obesewith.teefred", "@obesewith.yerm", 
-                        "@obesewith.jamarcus", "@obesewith.munky", "@obesewith.glassy"]
-        return jsonify({"characters": default_chars})
-
-@app.route("/snap_remix", methods=["POST"])
-def snap_remix():
-    """Generate Snap-style remix with Tyrone personality"""
-    try:
-        # Load the snap style configuration
-        with open('snap_style_generator.json', 'r') as f:
-            snap_data = json.load(f)
-        
-        # Get personality from request or default to random
-        data = request.get_json() or {}
-        personality = data.get("personality", random.choice(snap_data["personality_level"]))
-        
-        # Random selections from each category
-        duration = random.choice(snap_data["video_duration_sec"])
-        theme = random.choice(snap_data["theme"])
-        lighting = random.choice(snap_data["lighting_style"])
-        camera = random.choice(snap_data["camera_effects"])
-        visual = random.choice(snap_data["visual_style"])
-        audio = random.choice(snap_data["audio_style"])
-        text_style = random.choice(snap_data["text_overlay_style"])
-        cta = random.choice(snap_data["call_to_action"])
-        
-        # Get random scene and characters from existing banks
-        scene = random.choice(scene_options)
-        cameos = random.choice(cameos_options)
-        
-        # Add Tyrone-style flavor text based on personality
-        if personality == "calm":
-            vibe = "Relaxed and cinematic, smooth transitions and natural tone."
-            narration_style = "chill and conversational"
-        elif personality == "witty":
-            vibe = "Playful rhythm, quick cuts, tongue-in-cheek narration, sharp one-liners."
-            narration_style = "clever and sarcastic"
-        else:  # unhinged
-            vibe = "Chaotic and explosive, jump cuts, spinning shots, wild energy, unfiltered Tyrone commentary!"
-            narration_style = "absolutely wild and unfiltered"
-        
-        # Build the Sora-ready prompt
-        sora_prompt = f"""[SNAP REMIX - {personality.upper()} MODE]
-
-🎬 Duration: {duration}s
-🎨 Theme: {theme}
-💡 Lighting: {lighting}
-📹 Camera: {camera}
-🎞️ Visual: {visual}
-🎵 Audio: {audio}
-📝 Text Style: {text_style}
-🗣️ Personality: {personality.upper()}
-👥 Characters: {', '.join(cameos)}
-
-📍 SCENE:
-{scene}
-
-🎯 VIBE:
-{vibe}
-
-🎙️ TYRONE NARRATION ({narration_style}):
-"Yo, it's {theme} energy time, baby! We got {', '.join(cameos)} in the mix! Let's roll the dice, snap the vibe, and flip the scene — {cta}!"
-
-🔥 EXECUTION:
-Create a fast-cut, {theme.lower()} inspired clip with {lighting.lower()} lighting and {camera.lower()} camera motion. 
-Add {visual.lower()} visuals synced to {audio.lower()} soundtrack. 
-On-screen text styled as {text_style.lower()} flashes across the screen with "{cta}".
-
-⚡ CALL TO ACTION: {cta}"""
-        
-        return jsonify({
-            "personality": personality,
-            "duration": duration,
-            "theme": theme,
-            "characters": cameos,
-            "scene": scene,
-            "sora_prompt": sora_prompt.strip(),
-            "config": {
-                "lighting": lighting,
-                "camera": camera,
-                "visual": visual,
-                "audio": audio,
-                "text_style": text_style,
-                "cta": cta
-            }
-        })
-    except Exception as e:
-        print(f"Error in snap_remix: {e}")
-        return jsonify({"error": "Failed to generate snap remix"}), 500
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT character_name, created_at FROM custom_characters ORDER BY created_at DESC")
+    characters = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    return jsonify({"characters": [c["character_name"] for c in characters]})
 
 @app.route("/download", methods=["POST"])
 def download():
@@ -575,181 +410,5 @@ def download():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/json")
 
-@app.route("/generate", methods=["POST"])
-def generate_video():
-    """Generate video using updated Kie.AI API endpoints with fallback"""
-    data = request.get_json()
-    prompt = data.get("prompt")
-    duration = data.get("duration", 10)
-    resolution = data.get("resolution", "720p")
-    api_key = data.get("api_key")  # Optional - can use env var
-    
-    if not prompt:
-        return jsonify({"error": "Prompt is required"}), 400
-    
-    # Use provided API key or environment variable
-    key_to_use = api_key or os.environ.get("KIE_API_KEY")
-    
-    if not key_to_use:
-        return jsonify({"error": "API key required. Set KIE_API_KEY env var or provide in request"}), 400
-    
-    # Correct Kie.AI endpoint (found and verified)
-    url = "https://api.kie.ai/api/v1/playground/createTask"
-    
-    # Correct payload structure for Kie.AI
-    payload = {
-        "model": "sora-2-pro-text-to-video",  # Correct model name
-        "prompt": prompt,
-        "aspectRatio": "16:9",  # camelCase for Kie.AI
-        "numFrames": int(duration) * 30,  # Convert seconds to frames (30fps)
-        "removeWatermark": True
-    }
-    
-    headers = {
-        "Authorization": f"Bearer {key_to_use}",
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        print(f"Calling Kie.AI API: {url}")
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            # Kie.AI returns a task_id for async processing
-            return jsonify({
-                "taskId": result.get("task_id"),
-                "status": "queued",
-                "message": "Video generation started. Use the taskId to check status."
-            })
-        elif response.status_code == 401:
-            return jsonify({"error": "Invalid API key. Please check your Kie.AI API key."}), 401
-        elif response.status_code == 429:
-            return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
-        elif response.status_code == 400:
-            error_data = response.json() if response.text else {"error": "Invalid request parameters"}
-            return jsonify(error_data), 400
-        else:
-            error_msg = f"API error: {response.status_code}"
-            if response.text:
-                try:
-                    error_data = response.json()
-                    error_msg = error_data.get("error", error_msg)
-                except:
-                    error_msg += f" - {response.text[:200]}"
-            return jsonify({"error": error_msg}), response.status_code
-            
-    except requests.exceptions.Timeout:
-        return jsonify({"error": "Request timed out. Video generation might take longer."}), 504
-    except requests.exceptions.RequestException as e:
-        print(f"Kie.AI API request error: {e}")
-        return jsonify({"error": f"Connection error: {str(e)}"}), 503
-    except Exception as e:
-        print(f"Error in generate_video: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/check-status/<task_id>", methods=["GET"])
-def check_status(task_id):
-    """Check the status of a video generation task"""
-    api_key = request.args.get("api_key") or os.environ.get("KIE_API_KEY")
-    
-    if not api_key:
-        return jsonify({"error": "API key required"}), 400
-    
-    # Correct status check endpoint for Kie.AI
-    url = "https://api.kie.ai/api/v1/playground/recordInfo"
-    headers = {
-        "Authorization": f"Bearer {api_key}"
-    }
-    params = {
-        "taskId": task_id  # camelCase for Kie.AI
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            return jsonify({
-                "taskId": result.get("taskId"),
-                "status": result.get("status"),
-                "video_url": result.get("video_url"),
-                "processing_time": result.get("processing_time"),
-                "credits_used": result.get("credits_used")
-            })
-        else:
-            return jsonify({"error": f"Failed to check status: {response.status_code}"}), response.status_code
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/sora-generate", methods=["POST"])
-def sora_generate_kieai():
-    """Generate video using Kie.AI Sora 2 Pro API"""
-    try:
-        data = request.get_json()
-        api_key = data.get("api_key")
-        prompt = data.get("prompt")
-        duration = data.get("duration", 10)
-        resolution = data.get("resolution", "720p")
-        
-        if not api_key:
-            return jsonify({"error": "API key is required"}), 400
-        if not prompt:
-            return jsonify({"error": "Prompt is required"}), 400
-        
-        # Call Kie.AI Sora 2 Pro API
-        response = requests.post(
-            "https://api.kie.ai/api/v1/playground/createTask",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "sora-2-pro-text-to-video",  # Correct model name
-                "prompt": prompt,
-                "aspectRatio": "16:9",  # camelCase
-                "numFrames": int(duration) * 30,  # Convert seconds to frames
-                "removeWatermark": True
-            },
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            # Kie.AI might return a job ID for processing or direct URL
-            if result.get("url"):
-                return jsonify({
-                    "status": "completed",
-                    "url": result["url"],
-                    "duration": duration,
-                    "resolution": resolution
-                })
-            elif result.get("job_id"):
-                return jsonify({
-                    "status": "processing",
-                    "job_id": result["job_id"],
-                    "message": "Video is being generated. Check back in a few moments."
-                })
-            else:
-                return jsonify(result)
-        elif response.status_code == 401:
-            return jsonify({"error": "Invalid API key"}), 401
-        elif response.status_code == 429:
-            return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
-        else:
-            error_data = response.json() if response.text else {"error": f"API error: {response.status_code}"}
-            return jsonify(error_data), response.status_code
-            
-    except requests.exceptions.Timeout:
-        return jsonify({"error": "Request timed out. Video generation might take longer."}), 504
-    except requests.exceptions.RequestException as e:
-        print(f"Kie.AI API request error: {e}")
-        return jsonify({"error": f"Connection error: {str(e)}"}), 503
-    except Exception as e:
-        print(f"Error in sora_generate_kieai: {e}")
-        return jsonify({"error": "Failed to generate video"}), 500
-
 if __name__ == '__main__':
-    # Run in production mode for stability - no debug, no reloader
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=True)

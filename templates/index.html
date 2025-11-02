@@ -20,46 +20,10 @@ textarea {height:100px; resize:vertical;}
 <button id="gen">Generate Two Prompts</button>
 <button id="aiGen">🤖 AI Generate (GPT-4)</button>
 <button id="cycle">🎨 Style Cycler (5 Variants)</button>
-<button id="snapRemix">🔥 Snap Remix (Tyrone Style)</button>
 <button id="remixToggle">🔄 Remix Mode</button>
 <button id="download">⬇️ Download JSON File</button>
 <p>Project Notes (optional):</p>
 <input id="notesInput" placeholder="Example: Weekend TikTok dropset, bayou noir vibe">
-
-<div style="border:2px solid #ff00ff; padding:20px; margin:20px 0;">
-  <h2>🔑 Sora API Connection</h2>
-  <div style="margin-bottom:10px;">
-    <label style="color:#ff00ff;">API Provider:</label>
-    <select id="apiProvider" style="background:#111; color:#0ff; border:1px solid #0ff; padding:5px; margin-left:10px;">
-      <option value="openai">OpenAI Sora (Coming Soon)</option>
-      <option value="kieai">Kie.AI Sora 2 Pro</option>
-    </select>
-  </div>
-  <p id="apiInstructions">Enter your API key to enable direct video generation:</p>
-  <input id="soraApiKey" type="password" placeholder="Enter API key..." style="width:400px;">
-  <button id="saveSoraKey">💾 Save Key</button>
-  <button id="clearSoraKey">🗑️ Clear</button>
-  <span id="soraStatus" style="margin-left:10px; font-weight:bold;"></span>
-  <div id="soraFeatures" style="display:none; margin-top:15px;">
-    <button id="generateSoraVideo" style="background:#ff00ff; color:#fff; font-size:1.2em; padding:15px;">🎬 Generate Sora Video from Last Prompt</button>
-    <div style="margin-top:10px;">
-      <label>Duration (seconds): </label>
-      <select id="videoDuration" style="background:#111; color:#0ff; border:1px solid #0ff; padding:3px;">
-        <option value="5">5s</option>
-        <option value="10" selected>10s</option>
-        <option value="15">15s</option>
-        <option value="20">20s</option>
-      </select>
-      <label style="margin-left:20px;">Resolution: </label>
-      <select id="videoResolution" style="background:#111; color:#0ff; border:1px solid #0ff; padding:3px;">
-        <option value="480p">480p</option>
-        <option value="720p" selected>720p (HD)</option>
-        <option value="1080p">1080p (Full HD)</option>
-      </select>
-    </div>
-    <div id="soraVideoStatus" style="margin-top:10px;"></div>
-  </div>
-</div>
 
 <div style="border:2px solid #0ff; padding:20px; margin:20px 0;">
   <h2>💾 Save Custom Characters</h2>
@@ -80,231 +44,21 @@ textarea {height:100px; resize:vertical;}
   <h2>🎚️ Sora Remix Station</h2>
   <div class="input-row">
     <label>📹 Sora Link:</label><br>
-    <input id="soraLink" type="text" placeholder="Paste your Sora link here" style="width:100%;">
+    <input id="videoLink" placeholder="https://sora.chatgpt.com/p/s_...">
   </div>
   <div class="input-row">
     <label>🥚 Remix Ingredients (JSON):</label><br>
-    <textarea id="remixIngredients" placeholder='{"sound":"trap beats","style":"cyberpunk noir","lighting":"neon purple","mood":"surreal","seconds":10,"size":"1280x720"}' style="height:100px; width:100%;"></textarea>
+    <textarea id="remixJSON" placeholder='{"characters":["@yourcharname1", "@yourcharname2"], "style":"Cyberpunk Neon", "lighting":"purple haze sunset", "camera":"slow tracking shot", "music":"trap beats with synth", "mood":"dreamy and surreal"}' style="height:150px;"></textarea>
   </div>
-  <button id="remixBtn">🎛️ Remix It!</button>
-  <div class="input-row" style="margin-top:15px;">
-    <label>📋 Your Remix Prompt:</label><br>
-    <textarea id="remixOutput" readonly placeholder="Your Remix Prompt will appear here..." style="height:200px; width:100%; background:#0a0a0a; color:#0ff; border:2px solid #0ff;"></textarea>
-    <button class="copy" onclick="copyText('remixOutput')" style="margin-top:10px;">Copy Remix Prompt</button>
-  </div>
+  <button id="savePreset">💾 Save Remix Preset</button>
+  <button id="loadPreset">📂 Load Preset</button>
+  <button id="generateRemix">🎛️ Remix It!</button>
 </div>
 
 <div id="results"></div>
 
 <script>
 let latestPrompts = [];
-let soraApiKey = null;
-let apiProvider = 'kieai'; // Default to Kie.AI
-
-// Sora API Key Management
-function initSoraAPI() {
-  // Load saved provider and key from localStorage
-  const savedProvider = localStorage.getItem('soraApiProvider') || 'kieai';
-  const savedKey = localStorage.getItem(`soraApiKey_${savedProvider}`);
-  
-  document.getElementById('apiProvider').value = savedProvider;
-  apiProvider = savedProvider;
-  updateApiInstructions();
-  
-  if (savedKey) {
-    soraApiKey = savedKey;
-    document.getElementById('soraApiKey').value = '••••••••' + savedKey.slice(-4); // Show last 4 chars
-    document.getElementById('soraStatus').textContent = '✅ Key Loaded';
-    document.getElementById('soraStatus').style.color = '#0f0';
-    document.getElementById('soraFeatures').style.display = 'block';
-  } else {
-    document.getElementById('soraStatus').textContent = '❌ No Key';
-    document.getElementById('soraStatus').style.color = '#f00';
-  }
-}
-
-function updateApiInstructions() {
-  const provider = document.getElementById('apiProvider').value;
-  const instructions = document.getElementById('apiInstructions');
-  const keyInput = document.getElementById('soraApiKey');
-  
-  if (provider === 'openai') {
-    instructions.textContent = 'Enter your OpenAI Sora API key (starts with sk-):';
-    keyInput.placeholder = 'sk-...';
-  } else {
-    instructions.textContent = 'Enter your Kie.AI API key:';
-    keyInput.placeholder = 'Your Kie.AI API key...';
-  }
-}
-
-document.getElementById('apiProvider').addEventListener('change', (e) => {
-  apiProvider = e.target.value;
-  localStorage.setItem('soraApiProvider', apiProvider);
-  updateApiInstructions();
-  
-  // Load key for this provider if exists
-  const savedKey = localStorage.getItem(`soraApiKey_${apiProvider}`);
-  if (savedKey) {
-    soraApiKey = savedKey;
-    document.getElementById('soraApiKey').value = '••••••••' + savedKey.slice(-4);
-    document.getElementById('soraStatus').textContent = '✅ Key Loaded';
-    document.getElementById('soraStatus').style.color = '#0f0';
-    document.getElementById('soraFeatures').style.display = 'block';
-  } else {
-    soraApiKey = null;
-    document.getElementById('soraApiKey').value = '';
-    document.getElementById('soraStatus').textContent = '❌ No Key';
-    document.getElementById('soraStatus').style.color = '#f00';
-    document.getElementById('soraFeatures').style.display = 'none';
-  }
-});
-
-document.getElementById('saveSoraKey').addEventListener('click', () => {
-  const keyInput = document.getElementById('soraApiKey').value.trim();
-  const provider = document.getElementById('apiProvider').value;
-  
-  if (!keyInput) {
-    alert('Please enter an API key');
-    return;
-  }
-  
-  // Validate based on provider
-  if (provider === 'openai' && !keyInput.startsWith('sk-')) {
-    alert('OpenAI keys should start with sk-');
-    return;
-  }
-  
-  soraApiKey = keyInput;
-  localStorage.setItem(`soraApiKey_${provider}`, keyInput);
-  document.getElementById('soraApiKey').value = '••••••••' + keyInput.slice(-4);
-  document.getElementById('soraStatus').textContent = '✅ Key Saved';
-  document.getElementById('soraStatus').style.color = '#0f0';
-  document.getElementById('soraFeatures').style.display = 'block';
-  alert(`${provider === 'openai' ? 'OpenAI Sora' : 'Kie.AI'} API key saved locally! You can now generate videos.`);
-});
-
-document.getElementById('clearSoraKey').addEventListener('click', () => {
-  if (confirm('Remove your Sora API key?')) {
-    const provider = document.getElementById('apiProvider').value;
-    soraApiKey = null;
-    localStorage.removeItem(`soraApiKey_${provider}`);
-    document.getElementById('soraApiKey').value = '';
-    document.getElementById('soraStatus').textContent = '❌ No Key';
-    document.getElementById('soraStatus').style.color = '#f00';
-    document.getElementById('soraFeatures').style.display = 'none';
-    alert('API key removed');
-  }
-});
-
-document.getElementById('generateSoraVideo').addEventListener('click', async () => {
-  if (!soraApiKey) {
-    alert('Please enter your API key first!');
-    return;
-  }
-  
-  if (!latestPrompts || latestPrompts.length === 0) {
-    alert('Generate a prompt first, then click this button to create a video!');
-    return;
-  }
-  
-  const provider = document.getElementById('apiProvider').value;
-  const statusDiv = document.getElementById('soraVideoStatus');
-  const duration = document.getElementById('videoDuration').value;
-  const resolution = document.getElementById('videoResolution').value;
-  
-  statusDiv.innerHTML = '<div style="color:#ff00ff;">🎬 Generating video... (this may take a few moments)</div>';
-  
-  // Get the most recent prompt
-  const promptToUse = latestPrompts[0].sora_prompt || latestPrompts[0].prompt || JSON.stringify(latestPrompts[0]);
-  
-  try {
-    if (provider === 'kieai') {
-      // Use Flask backend route for Kie.AI
-      const response = await fetch('/api/sora-generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          api_key: soraApiKey,
-          prompt: promptToUse,
-          duration: parseInt(duration),
-          resolution: resolution
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.url) {
-          statusDiv.innerHTML = `
-            <div style="color:#0f0;">✅ Video generated with Kie.AI Sora 2 Pro!</div>
-            <div style="margin-top:10px;">
-              <a href="${data.url}" target="_blank" style="color:#ff00ff; font-size:1.2em;">🎥 View Your Video</a>
-            </div>
-            <div style="margin-top:5px; color:#888;">Duration: ${duration}s | Resolution: ${resolution}</div>
-          `;
-        } else if (data.status === 'processing') {
-          statusDiv.innerHTML = `
-            <div style="color:#ff0;">⏳ Video is being processed...</div>
-            <div style="color:#888; margin-top:5px;">Check back in a few moments. Job ID: ${data.job_id}</div>
-          `;
-        }
-      } else {
-        const error = await response.json();
-        statusDiv.innerHTML = `<div style="color:#f00;">❌ Error: ${error.error || 'Failed to generate video'}</div>`;
-      }
-    } else {
-      // OpenAI Sora (placeholder for when available)
-      const response = await fetch('https://api.openai.com/v1/video/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${soraApiKey}`
-        },
-        body: JSON.stringify({
-          model: 'sora-2',
-          prompt: promptToUse,
-          duration: parseInt(duration),
-          size: resolution === '480p' ? '854x480' : resolution === '720p' ? '1280x720' : '1920x1080'
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        statusDiv.innerHTML = `
-          <div style="color:#0f0;">✅ Video generated with OpenAI Sora!</div>
-          <div style="margin-top:10px;">
-            <a href="${data.url}" target="_blank" style="color:#ff00ff;">🎥 View Your Video</a>
-          </div>
-        `;
-      } else {
-        if (response.status === 404) {
-          statusDiv.innerHTML = `
-            <div style="color:#ff0;">⚠️ OpenAI Sora API is not yet publicly available</div>
-            <div style="color:#888; margin-top:5px;">Your key is saved for when it becomes available!</div>
-            <div style="margin-top:10px;">For now, try using Kie.AI Sora 2 Pro or copy your prompts to: 
-              <a href="https://sora.openai.com" target="_blank" style="color:#ff00ff;">sora.openai.com</a>
-            </div>
-          `;
-        } else {
-          const error = await response.text();
-          statusDiv.innerHTML = `<div style="color:#f00;">❌ Error: ${error}</div>`;
-        }
-      }
-    }
-  } catch (err) {
-    statusDiv.innerHTML = `
-      <div style="color:#ff0;">⚠️ API Connection Issue</div>
-      <div style="color:#888; margin-top:5px;">Error: ${err.message}</div>
-      <div style="margin-top:10px;">Check your API key and try again.</div>
-    `;
-  }
-});
-
-// Initialize on page load
-window.addEventListener('load', () => {
-  initSoraAPI();
-});
 
 async function loadSavedCharacters(){
   const res = await fetch('/get_characters');
@@ -354,20 +108,8 @@ async function getPrompts(){
 
 function copyText(id){
   const el = document.getElementById(id);
-  // Handle both textarea (value) and pre/div elements (innerText)
-  const text = el.value || el.innerText || el.textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    alert('Copied to clipboard!');
-  }).catch(err => {
-    // Fallback for older browsers or permission issues
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    alert('Copied to clipboard!');
-  });
+  navigator.clipboard.writeText(el.innerText);
+  alert('Copied to clipboard!');
 }
 
 document.getElementById('gen').addEventListener('click', getPrompts);
@@ -441,121 +183,83 @@ document.getElementById('remixToggle').addEventListener('click', ()=>{
   section.classList.toggle('active');
 });
 
-// Snap Remix functionality
-document.getElementById('snapRemix').addEventListener('click', async ()=>{
-  const box = document.getElementById('results');
-  box.innerHTML = '<div style="text-align:center;">🔥 GENERATING SNAP REMIX...</div>';
+document.getElementById('generateRemix').addEventListener('click', async ()=>{
+  const videoLink = document.getElementById('videoLink').value;
+  const remixJSONText = document.getElementById('remixJSON').value;
+
+  if(!remixJSONText){
+    alert('Please add your remix ingredients (JSON)!');
+    return;
+  }
+
+  let remix;
+  try {
+    remix = JSON.parse(remixJSONText);
+  } catch(e) {
+    alert('Invalid JSON! Check your remix ingredients formatting.');
+    return;
+  }
+
+  const characters = Array.isArray(remix.characters) ? remix.characters.join(', ') : (remix.characters || '');
   
-  // Show personality selector
-  const personalities = ['calm', 'witty', 'unhinged'];
-  const selectedPersonality = prompt('Choose personality:\n- calm (smooth cinematic)\n- witty (sarcastic comedy)\n- unhinged (pure chaos)\n\nEnter: calm, witty, or unhinged', 'unhinged');
-  
-  const personality = personalities.includes(selectedPersonality) ? selectedPersonality : 'unhinged';
-  
-  const res = await fetch('/snap_remix', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({personality: personality})
+  const res = await fetch('/remix',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      video_link: videoLink,
+      original_prompt: remix.original_prompt || '',
+      characters: characters,
+      style: remix.style || '',
+      lighting: remix.lighting || '',
+      camera: remix.camera || '',
+      music: remix.music || '',
+      mood: remix.mood || ''
+    })
   });
-  
   const data = await res.json();
   latestPrompts = [data];
-  
+  const box = document.getElementById('results');
   box.innerHTML = `
-    <h2>🔥 SNAP REMIX - ${data.personality.toUpperCase()} MODE</h2>
-    <h3>🎬 Scene:</h3>
-    <pre id="snapScene">${data.scene}</pre>
-    <button class="copy" onclick="copyText('snapScene')">Copy Scene</button>
-    
-    <h3>👥 Characters:</h3>
-    <pre id="snapChars">${data.characters.join(', ')}</pre>
-    <button class="copy" onclick="copyText('snapChars')">Copy Characters</button>
-    
-    <h3>⚙️ Config:</h3>
-    <pre id="snapConfig">Duration: ${data.duration}s
-Theme: ${data.theme}
-Lighting: ${data.config.lighting}
-Camera: ${data.config.camera}
-Visual: ${data.config.visual}
-Audio: ${data.config.audio}
-Text Style: ${data.config.text_style}
-Call To Action: ${data.config.cta}</pre>
-    <button class="copy" onclick="copyText('snapConfig')">Copy Config</button>
-    
-    <h3>🎯 SORA PROMPT (Copy This!):</h3>
-    <pre id="snapPrompt" style="background:#111; border:3px solid #f0f;">${data.sora_prompt}</pre>
-    <button class="copy" onclick="copyText('snapPrompt')" style="font-size:1.2em; padding:15px;">🔥 COPY SNAP REMIX PROMPT</button>
+    <h2>🔥 REMIX READY</h2>
+    <h3>Original Video:</h3>
+    <pre id="remixOriginal">${data.original_video || 'N/A'}</pre>
+    <button class="copy" onclick="copyText('remixOriginal')">Copy</button>
+    <h3>Remix Config:</h3>
+    <pre id="remixConfig">${JSON.stringify(data.remix_config, null, 2)}</pre>
+    <button class="copy" onclick="copyText('remixConfig')">Copy</button>
+    <h3>🎬 Sora Prompt (Copy This):</h3>
+    <pre id="remixOut">${data.sora_prompt}</pre>
+    <button class="copy" onclick="copyText('remixOut')">Copy Remix Prompt</button>
   `;
 });
 
-document.getElementById('remixBtn').addEventListener('click', () => {
-  const soraLink = document.getElementById('soraLink').value.trim();
-  const remixJSON = document.getElementById('remixIngredients').value.trim();
+document.getElementById('savePreset').addEventListener('click', ()=>{
+  const presetName = prompt('Name your remix preset:');
+  if(!presetName) return;
+  
+  const preset = {
+    soraLink: document.getElementById('videoLink').value,
+    remix: document.getElementById('remixJSON').value
+  };
+  
+  localStorage.setItem('remix_preset_' + presetName, JSON.stringify(preset));
+  alert('Remix preset saved: ' + presetName);
+});
 
-  if (!soraLink) {
-    alert('⚠️ Missing Sora link!');
+document.getElementById('loadPreset').addEventListener('click', ()=>{
+  const presetName = prompt('Enter remix preset name to load:');
+  if(!presetName) return;
+  
+  const preset = localStorage.getItem('remix_preset_' + presetName);
+  if(!preset){
+    alert('Remix preset not found!');
     return;
   }
-  if (!remixJSON) {
-    alert('⚠️ Missing Remix JSON!');
-    return;
-  }
-
-  let remixData;
-  try {
-    remixData = JSON.parse(remixJSON);
-  } catch (err) {
-    alert('❌ Invalid JSON format!');
-    console.error(err);
-    return;
-  }
-
-  // Check if data is nested in a "prompt" object (new Sora format) or flat
-  const promptData = remixData.prompt || remixData;
   
-  // Build the remix prompt with clean formatting
-  let remixPrompt = `🎬 Recreate the following Sora scene:\n\n`;
-  remixPrompt += `🎥 Original Video: ${soraLink}\n\n`;
-  remixPrompt += `🎚️ Remix Ingredients:\n`;
-  
-  // Handle all possible fields from both formats
-  if (promptData.scene) {
-    remixPrompt += `• Scene: ${promptData.scene}\n`;
-  }
-  if (promptData.cameos && Array.isArray(promptData.cameos)) {
-    remixPrompt += `• Cameos: ${promptData.cameos.join(', ')}\n`;
-  }
-  if (promptData.dialogue) {
-    remixPrompt += `• Dialogue: "${promptData.dialogue}"\n`;
-  }
-  if (promptData.camera) {
-    remixPrompt += `• Camera: ${promptData.camera}\n`;
-  }
-  if (promptData.sound) {
-    remixPrompt += `• Sound: ${promptData.sound}\n`;
-  }
-  if (promptData.style) {
-    remixPrompt += `• Style: ${promptData.style}\n`;
-  }
-  if (promptData.lighting) {
-    remixPrompt += `• Lighting: ${promptData.lighting}\n`;
-  }
-  if (promptData.mood) {
-    remixPrompt += `• Mood: ${promptData.mood}\n`;
-  }
-  
-  // Handle root-level properties (seconds, size, model)
-  if (remixData.model) {
-    remixPrompt += `• Model: ${remixData.model}\n`;
-  }
-  if (remixData.seconds) {
-    remixPrompt += `• Seconds: ${remixData.seconds}\n`;
-  }
-  if (remixData.size) {
-    remixPrompt += `• Size: ${remixData.size}\n`;
-  }
-
-  document.getElementById('remixOutput').value = remixPrompt.trim();
+  const data = JSON.parse(preset);
+  document.getElementById('videoLink').value = data.soraLink || '';
+  document.getElementById('remixJSON').value = data.remix || '';
+  alert('Remix preset loaded: ' + presetName);
 });
 
 document.getElementById('download').addEventListener('click', async ()=>{
